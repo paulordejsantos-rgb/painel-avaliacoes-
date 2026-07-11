@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Avaliações — A Casa & Designer</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  /* ---- LOGIN ---- */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:360px;}
+  .login-box h1{font-size:20px;color:var(--gold);margin:0 0 4px;text-align:center;}
+  .login-box p{font-size:13px;color:var(--muted);margin:0 0 24px;text-align:center;}
+  .login-box input{width:100%;padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:14px;}
+  .login-box button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;}
+  .login-box button:disabled{opacity:0.5;cursor:not-allowed;}
+  .login-err{color:#e35b5b;font-size:13px;margin-top:10px;text-align:center;min-height:16px;}
+
+  /* ---- DASHBOARD ---- */
+  .app{display:none;}
+  .app.show{display:block;}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;}
+  header.top h1{font-size:18px;color:var(--gold);margin:0;}
+  header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+
+  .main{max-width:1100px;margin:0 auto;padding:20px;}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+  .stat-card .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;}
+  .stat-card .val{font-size:22px;font-weight:700;color:var(--gold);}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .filters select{background:var(--card);color:var(--txt);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;}
+
+  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:12px 14px;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--border);}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+  .tag-digital{background:rgba(201,168,76,0.15);color:var(--gold);}
+  .tag-estab{background:rgba(90,150,220,0.15);color:#7ab0e8;}
+  .stars{color:var(--gold);white-space:nowrap;}
+  .sugestao{color:var(--txt);max-width:280px;}
+  .muted{color:var(--muted);}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+  .loading{padding:40px;text-align:center;color:var(--muted);}
+</style>
+</head>
+<body>
+
+  <div class="login-wrap" id="login-wrap">
+    <div class="login-box">
+      <h1>Painel de Avaliações</h1>
+      <p>A Casa & Designer</p>
+      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+      <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+      <button id="login-btn" onclick="fazerLogin()">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="top">
+      <h1>⭐ Painel de Avaliações</h1>
+      <button onclick="fazerLogout()">Sair</button>
+    </header>
+
+    <div class="main">
+      <div class="stats" id="stats"></div>
+
+      <div class="filters">
+        <select id="filtro-restaurante" onchange="aplicarFiltros()">
+          <option value="">Todos os restaurantes</option>
+          <option value="Pizzaria Premium">Pizzaria Premium</option>
+          <option value="The Burger Foundry">The Burger Foundry</option>
+          <option value="Bistrô Designer">Bistrô Designer</option>
+          <option value="Peso & Sabor">Peso & Sabor</option>
+        </select>
+        <select id="filtro-tipo" onchange="aplicarFiltros()">
+          <option value="">Todos os tipos</option>
+          <option value="cardapio_digital">Cardápio digital</option>
+          <option value="estabelecimento">Estabelecimento</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <div id="tabela-container" class="loading">Carregando...</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let todasAvaliacoes = [];
+
+async function fazerLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if(!email || !senha){ err.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+  if(error){
+    err.textContent = 'E-mail ou senha inválidos.';
+    return;
+  }
+  mostrarApp();
+}
+
+async function fazerLogout(){
+  await sb.auth.signOut();
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-wrap').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-senha').value = '';
+}
+
+function estrelasHtml(n){
+  if(n == null) return '<span class="muted">—</span>';
+  return '<span class="stars">' + '★'.repeat(n) + '☆'.repeat(5-n) + '</span>';
+}
+
+function formatarData(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+
+function renderStats(lista){
+  const total = lista.length;
+  const porRestaurante = {};
+  lista.forEach(a => { porRestaurante[a.restaurante] = (porRestaurante[a.restaurante]||0)+1; });
+
+  const notasDigital = lista.filter(a => a.tipo === 'cardapio_digital' && a.nota_digital != null).map(a => a.nota_digital);
+  const mediaDigital = notasDigital.length ? (notasDigital.reduce((a,b)=>a+b,0)/notasDigital.length).toFixed(1) : '—';
+
+  const notasEstab = lista.filter(a => a.tipo === 'estabelecimento' && a.nota_estabelecimento != null).map(a => a.nota_estabelecimento);
+  const mediaEstab = notasEstab.length ? (notasEstab.reduce((a,b)=>a+b,0)/notasEstab.length).toFixed(1) : '—';
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="lbl">Total de avaliações</div><div class="val">${total}</div></div>
+    <div class="stat-card"><div class="lbl">Média cardápio digital</div><div class="val">${mediaDigital}</div></div>
+    <div class="stat-card"><div class="lbl">Média estabelecimento</div><div class="val">${mediaEstab}</div></div>
+  `;
+}
+
+function renderTabela(lista){
+  const container = document.getElementById('tabela-container');
+  if(lista.length === 0){
+    container.innerHTML = '<div class="empty">Nenhuma avaliação encontrada.</div>';
+    return;
+  }
+  let rows = lista.map(a => {
+    let notasCol = '';
+    if(a.tipo === 'cardapio_digital'){
+      notasCol = `<div>Tradicional: ${estrelasHtml(a.nota_tradicional)}</div><div>Digital: ${estrelasHtml(a.nota_digital)}</div>`;
+    } else {
+      notasCol = `<div>Estabelecimento: ${estrelasHtml(a.nota_estabelecimento)}</div>`;
+    }
+    const tagClass = a.tipo === 'cardapio_digital' ? 'tag-digital' : 'tag-estab';
+    const tagLabel = a.tipo === 'cardapio_digital' ? 'Cardápio digital' : 'Estabelecimento';
+    return `
+      <tr>
+        <td class="muted">${formatarData(a.created_at)}</td>
+        <td>${a.restaurante}</td>
+        <td class="muted">${a.mesa || '—'}</td>
+        <td><span class="tag ${tagClass}">${tagLabel}</span></td>
+        <td>${notasCol}</td>
+        <td class="sugestao">${a.sugestao ? a.sugestao : '<span class="muted">—</span>'}</td>
+      </tr>`;
+  }).join('');
+
+  document.getElementById('tabela-container').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Restaurante</th>
+          <th>Mesa</th>
+          <th>Tipo</th>
+          <th>Notas</th>
+          <th>Sugestão</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function aplicarFiltros(){
+  const restaurante = document.getElementById('filtro-restaurante').value;
+  const tipo = document.getElementById('filtro-tipo').value;
+  let lista = todasAvaliacoes;
+  if(restaurante) lista = lista.filter(a => a.restaurante === restaurante);
+  if(tipo) lista = lista.filter(a => a.tipo === tipo);
+  renderStats(lista);
+  renderTabela(lista);
+}
+
+async function carregarAvaliacoes(){
+  document.getElementById('tabela-container').innerHTML = '<div class="loading">Carregando...</div>';
+  const { data, error } = await sb
+    .from('avaliacoes')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if(error){
+    document.getElementById('tabela-container').innerHTML = '<div class="empty">Erro ao carregar avaliações: ' + error.message + '</div>';
+    return;
+  }
+  todasAvaliacoes = data || [];
+  aplicarFiltros();
+}
+
+function mostrarApp(){
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  carregarAvaliacoes();
+}
+
+(async function init(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){
+    mostrarApp();
+  }
+})();
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if(e.key === 'Enter') fazerLogin();
+});
+</script>
+</body>
+</html>
