@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM — A Casa & Designer</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:360px;}
+  .login-box h1{font-size:20px;color:var(--gold);margin:0 0 4px;text-align:center;}
+  .login-box p{font-size:13px;color:var(--muted);margin:0 0 24px;text-align:center;}
+  .login-box input{width:100%;padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:14px;}
+  .login-box button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;}
+  .login-err{color:#e35b5b;font-size:13px;margin-top:10px;text-align:center;min-height:16px;}
+
+  .app{display:none;}
+  .app.show{display:block;}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
+  header.top h1{font-size:18px;color:var(--gold);margin:0;}
+  header.top .nav-links{display:flex;gap:14px;font-size:13px;}
+  header.top .nav-links a{color:var(--muted);text-decoration:none;}
+  header.top .nav-links a.active{color:var(--gold);font-weight:700;}
+  header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+  .btn-novo{background:var(--gold) !important;color:#000 !important;font-weight:700;border:none !important;}
+
+  .main{max-width:1400px;margin:0 auto;padding:20px;}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .stat-card .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;}
+  .stat-card .val{font-size:20px;font-weight:700;color:var(--gold);}
+
+  .board{display:flex;gap:14px;overflow-x:auto;padding-bottom:12px;}
+  .col{background:var(--card);border:1px solid var(--border);border-radius:12px;min-width:250px;max-width:270px;flex:1;display:flex;flex-direction:column;max-height:calc(100vh - 260px);}
+  .col-head{padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.03em;display:flex;justify-content:space-between;}
+  .col-body{padding:10px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;}
+  .contato-card{background:#000;border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;}
+  .contato-card:hover{border-color:var(--gold);}
+  .contato-card .nome{font-size:13px;font-weight:700;color:var(--txt);}
+  .contato-card .empresa{font-size:11px;color:var(--muted);margin-top:2px;}
+  .contato-card .meta{font-size:11px;color:var(--muted);margin-top:6px;display:flex;justify-content:space-between;}
+  .contato-card .valor{color:var(--gold);font-weight:700;}
+  .contato-card .prox{color:#e8b84a;}
+  .contato-card .prox.vencido{color:#e35b5b;font-weight:700;}
+  .empty-col{font-size:11px;color:var(--muted);text-align:center;padding:14px 0;}
+
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;padding:20px;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;}
+  .modal h2{color:var(--gold);font-size:17px;margin:0 0 16px;}
+  .modal label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;display:block;margin-bottom:6px;margin-top:14px;}
+  .modal input, .modal select, .modal textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:13px;font-family:inherit;}
+  .modal textarea{min-height:70px;resize:vertical;}
+  .modal-actions{display:flex;gap:10px;margin-top:22px;}
+  .modal-actions button{flex:1;padding:11px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-salvar{background:var(--gold);color:#000;}
+  .btn-cancelar{background:transparent;border:1px solid var(--border) !important;color:var(--muted);}
+  .btn-excluir{background:transparent;border:1px solid #e35b5b !important;color:#e35b5b;margin-top:10px;width:100%;padding:10px;border-radius:8px;font-size:12px;cursor:pointer;}
+
+  .interacoes-list{margin-top:10px;display:flex;flex-direction:column;gap:8px;max-height:180px;overflow-y:auto;}
+  .interacao-item{background:#000;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;}
+  .interacao-item .data{color:var(--muted);font-size:10px;margin-bottom:4px;}
+  .add-interacao{display:flex;gap:8px;margin-top:8px;}
+  .add-interacao input{flex:1;}
+  .add-interacao button{padding:8px 14px;border-radius:8px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:12px;cursor:pointer;}
+
+  .loading{padding:40px;text-align:center;color:var(--muted);}
+</style>
+</head>
+<body>
+
+  <div class="login-wrap" id="login-wrap">
+    <div class="login-box">
+      <h1>CRM</h1>
+      <p>A Casa & Designer</p>
+      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+      <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+      <button id="login-btn" onclick="fazerLogin()">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="top">
+      <h1>📇 CRM</h1>
+      <div class="nav-links">
+        <a href="index.html">Avaliações</a>
+        <a href="crm.html" class="active">CRM</a>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-novo" onclick="abrirNovoContato()">+ Novo Contato</button>
+        <button onclick="fazerLogout()">Sair</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <div class="stats" id="stats"></div>
+      <div class="board" id="board">
+        <div class="loading">Carregando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal contato -->
+  <div class="modal-bg" id="modal-bg">
+    <div class="modal">
+      <h2 id="modal-titulo">Novo Contato</h2>
+      <input type="hidden" id="c-id">
+
+      <label>Nome *</label>
+      <input type="text" id="c-nome" placeholder="Nome do contato ou responsável">
+
+      <label>Empresa / Restaurante</label>
+      <input type="text" id="c-empresa" placeholder="Ex: Restaurante do João">
+
+      <label>Telefone</label>
+      <input type="text" id="c-telefone" placeholder="(21) 90000-0000">
+
+      <label>E-mail</label>
+      <input type="email" id="c-email" placeholder="contato@exemplo.com">
+
+      <label>Origem</label>
+      <input type="text" id="c-origem" placeholder="Ex: Indicação, Instagram, site...">
+
+      <label>Estágio</label>
+      <select id="c-estagio">
+        <option value="novo_lead">Novo Lead</option>
+        <option value="contato_feito">Contato Feito</option>
+        <option value="proposta_enviada">Proposta Enviada</option>
+        <option value="contrato_assinado">Contrato Assinado</option>
+        <option value="cliente_ativo">Cliente Ativo</option>
+        <option value="cliente_inativo">Cliente Inativo</option>
+        <option value="perdido">Perdido</option>
+      </select>
+
+      <label>Valor estimado (R$)</label>
+      <input type="number" id="c-valor" placeholder="0.00" step="0.01">
+
+      <label>Próximo contato</label>
+      <input type="date" id="c-proximo">
+
+      <label>Notas</label>
+      <textarea id="c-notas" placeholder="Observações gerais sobre esse contato..."></textarea>
+
+      <div id="interacoes-section" style="display:none;">
+        <label>Interações</label>
+        <div class="interacoes-list" id="interacoes-list"></div>
+        <div class="add-interacao">
+          <input type="text" id="nova-interacao" placeholder="Adicionar nota rápida...">
+          <button onclick="adicionarInteracao()">+</button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+        <button class="btn-salvar" id="btn-salvar-contato" onclick="salvarContato()">Salvar</button>
+      </div>
+      <button class="btn-excluir" id="btn-excluir-contato" style="display:none;" onclick="excluirContato()">Excluir contato</button>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const ESTAGIOS = [
+  { id: 'novo_lead', label: 'Novo Lead' },
+  { id: 'contato_feito', label: 'Contato Feito' },
+  { id: 'proposta_enviada', label: 'Proposta Enviada' },
+  { id: 'contrato_assinado', label: 'Contrato Assinado' },
+  { id: 'cliente_ativo', label: 'Cliente Ativo' },
+  { id: 'cliente_inativo', label: 'Cliente Inativo' },
+  { id: 'perdido', label: 'Perdido' },
+];
+
+let contatos = [];
+let editandoId = null;
+
+async function fazerLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if(!email || !senha){ err.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+  if(error){ err.textContent = 'E-mail ou senha inválidos.'; return; }
+  mostrarApp();
+}
+
+async function fazerLogout(){
+  await sb.auth.signOut();
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-wrap').style.display = 'flex';
+}
+
+function fmtMoeda(v){
+  if(v == null) return '';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function fmtDataCurta(iso){
+  if(!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('pt-BR');
+}
+
+function formatarDataHora(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+
+function renderStats(){
+  const total = contatos.length;
+  const ativos = contatos.filter(c => c.estagio === 'cliente_ativo').length;
+  const emAndamento = contatos.filter(c => !['cliente_ativo','cliente_inativo','perdido'].includes(c.estagio)).length;
+  const valorPipeline = contatos
+    .filter(c => !['cliente_ativo','cliente_inativo','perdido'].includes(c.estagio))
+    .reduce((s,c) => s + (Number(c.valor_estimado) || 0), 0);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="lbl">Total de contatos</div><div class="val">${total}</div></div>
+    <div class="stat-card"><div class="lbl">Clientes ativos</div><div class="val">${ativos}</div></div>
+    <div class="stat-card"><div class="lbl">Em andamento no funil</div><div class="val">${emAndamento}</div></div>
+    <div class="stat-card"><div class="lbl">Valor em pipeline</div><div class="val">${fmtMoeda(valorPipeline)}</div></div>
+  `;
+}
+
+function renderBoard(){
+  const hoje = new Date().toISOString().slice(0,10);
+  document.getElementById('board').innerHTML = ESTAGIOS.map(est => {
+    const doEstagio = contatos.filter(c => c.estagio === est.id);
+    const cards = doEstagio.map(c => {
+      const vencido = c.proximo_contato && c.proximo_contato < hoje;
+      return `
+        <div class="contato-card" onclick="abrirEditarContato('${c.id}')">
+          <div class="nome">${c.nome}</div>
+          ${c.empresa ? `<div class="empresa">${c.empresa}</div>` : ''}
+          <div class="meta">
+            <span class="valor">${c.valor_estimado ? fmtMoeda(c.valor_estimado) : ''}</span>
+            ${c.proximo_contato ? `<span class="prox ${vencido ? 'vencido' : ''}">${fmtDataCurta(c.proximo_contato)}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('') || '<div class="empty-col">Nenhum contato</div>';
+
+    return `
+      <div class="col">
+        <div class="col-head"><span>${est.label}</span><span>${doEstagio.length}</span></div>
+        <div class="col-body">${cards}</div>
+      </div>`;
+  }).join('');
+}
+
+async function carregarContatos(){
+  document.getElementById('board').innerHTML = '<div class="loading">Carregando...</div>';
+  const { data, error } = await sb.from('crm_contatos').select('*').order('criado_em', { ascending: false });
+  if(error){
+    document.getElementById('board').innerHTML = '<div class="loading">Erro: ' + error.message + '</div>';
+    return;
+  }
+  contatos = data || [];
+  renderStats();
+  renderBoard();
+}
+
+function abrirNovoContato(){
+  editandoId = null;
+  document.getElementById('modal-titulo').textContent = 'Novo Contato';
+  document.getElementById('c-id').value = '';
+  document.getElementById('c-nome').value = '';
+  document.getElementById('c-empresa').value = '';
+  document.getElementById('c-telefone').value = '';
+  document.getElementById('c-email').value = '';
+  document.getElementById('c-origem').value = '';
+  document.getElementById('c-estagio').value = 'novo_lead';
+  document.getElementById('c-valor').value = '';
+  document.getElementById('c-proximo').value = '';
+  document.getElementById('c-notas').value = '';
+  document.getElementById('interacoes-section').style.display = 'none';
+  document.getElementById('btn-excluir-contato').style.display = 'none';
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+async function abrirEditarContato(id){
+  const c = contatos.find(x => x.id === id);
+  if(!c) return;
+  editandoId = id;
+  document.getElementById('modal-titulo').textContent = 'Editar Contato';
+  document.getElementById('c-id').value = c.id;
+  document.getElementById('c-nome').value = c.nome || '';
+  document.getElementById('c-empresa').value = c.empresa || '';
+  document.getElementById('c-telefone').value = c.telefone || '';
+  document.getElementById('c-email').value = c.email || '';
+  document.getElementById('c-origem').value = c.origem || '';
+  document.getElementById('c-estagio').value = c.estagio || 'novo_lead';
+  document.getElementById('c-valor').value = c.valor_estimado || '';
+  document.getElementById('c-proximo').value = c.proximo_contato || '';
+  document.getElementById('c-notas').value = c.notas || '';
+  document.getElementById('interacoes-section').style.display = 'block';
+  document.getElementById('btn-excluir-contato').style.display = 'block';
+  document.getElementById('modal-bg').classList.add('open');
+  await carregarInteracoes(id);
+}
+
+async function carregarInteracoes(contatoId){
+  const container = document.getElementById('interacoes-list');
+  container.innerHTML = 'Carregando...';
+  const { data, error } = await sb
+    .from('crm_interacoes')
+    .select('*')
+    .eq('contato_id', contatoId)
+    .order('criado_em', { ascending: false });
+  if(error){ container.innerHTML = 'Erro ao carregar.'; return; }
+  if(!data || data.length === 0){ container.innerHTML = '<div style="color:var(--muted);font-size:12px;">Nenhuma interação registrada.</div>'; return; }
+  container.innerHTML = data.map(i => `
+    <div class="interacao-item">
+      <div class="data">${formatarDataHora(i.criado_em)}</div>
+      <div>${i.texto}</div>
+    </div>
+  `).join('');
+}
+
+async function adicionarInteracao(){
+  if(!editandoId) return;
+  const input = document.getElementById('nova-interacao');
+  const texto = input.value.trim();
+  if(!texto) return;
+  const { error } = await sb.from('crm_interacoes').insert({ contato_id: editandoId, texto });
+  if(error){ alert('Erro ao salvar interação: ' + error.message); return; }
+  input.value = '';
+  await carregarInteracoes(editandoId);
+}
+
+function fecharModal(){
+  document.getElementById('modal-bg').classList.remove('open');
+}
+
+async function salvarContato(){
+  const nome = document.getElementById('c-nome').value.trim();
+  if(!nome){ alert('Preencha o nome do contato.'); return; }
+
+  const payload = {
+    nome,
+    empresa: document.getElementById('c-empresa').value.trim() || null,
+    telefone: document.getElementById('c-telefone').value.trim() || null,
+    email: document.getElementById('c-email').value.trim() || null,
+    origem: document.getElementById('c-origem').value.trim() || null,
+    estagio: document.getElementById('c-estagio').value,
+    valor_estimado: document.getElementById('c-valor').value || null,
+    proximo_contato: document.getElementById('c-proximo').value || null,
+    notas: document.getElementById('c-notas').value.trim() || null,
+    atualizado_em: new Date().toISOString(),
+  };
+
+  const btn = document.getElementById('btn-salvar-contato');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  let error;
+  if(editandoId){
+    ({ error } = await sb.from('crm_contatos').update(payload).eq('id', editandoId));
+  } else {
+    ({ error } = await sb.from('crm_contatos').insert(payload));
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Salvar';
+
+  if(error){ alert('Erro ao salvar: ' + error.message); return; }
+  fecharModal();
+  await carregarContatos();
+}
+
+async function excluirContato(){
+  if(!editandoId) return;
+  if(!confirm('Tem certeza que deseja excluir este contato? Essa ação não pode ser desfeita.')) return;
+  const { error } = await sb.from('crm_contatos').delete().eq('id', editandoId);
+  if(error){ alert('Erro ao excluir: ' + error.message); return; }
+  fecharModal();
+  await carregarContatos();
+}
+
+function mostrarApp(){
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  carregarContatos();
+}
+
+(async function init(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ mostrarApp(); }
+})();
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if(e.key === 'Enter') fazerLogin();
+});
+</script>
+</body>
+</html>

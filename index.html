@@ -53,6 +53,17 @@
   .muted{color:var(--muted);}
   .empty{padding:40px;text-align:center;color:var(--muted);}
   .loading{padding:40px;text-align:center;color:var(--muted);}
+
+  .section-title{font-size:15px;color:var(--gold);margin:32px 0 12px;font-weight:700;}
+  .sugestoes-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;}
+  .sugestao-row{border-bottom:1px solid var(--border);padding-bottom:14px;}
+  .sugestao-row:last-child{border-bottom:none;padding-bottom:0;}
+  .sugestao-row .nome{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:8px;}
+  .sugestao-row textarea{width:100%;min-height:56px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;margin-bottom:8px;}
+  .sugestao-row-actions{display:flex;align-items:center;gap:10px;}
+  .sugestao-row button{padding:8px 16px;border-radius:8px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:12px;cursor:pointer;}
+  .sugestao-row button:disabled{opacity:0.5;cursor:not-allowed;}
+  .sugestao-status{font-size:11px;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -71,6 +82,10 @@
   <div class="app" id="app">
     <header class="top">
       <h1>⭐ Painel de Avaliações</h1>
+      <div style="display:flex;gap:14px;font-size:13px;">
+        <a href="index.html" style="color:var(--gold);font-weight:700;text-decoration:none;">Avaliações</a>
+        <a href="crm.html" style="color:var(--muted);text-decoration:none;">CRM</a>
+      </div>
       <button onclick="fazerLogout()">Sair</button>
     </header>
 
@@ -95,6 +110,9 @@
       <div class="table-wrap">
         <div id="tabela-container" class="loading">Carregando...</div>
       </div>
+
+      <div class="section-title">🍽️ Sugestão do Dia (do garçom)</div>
+      <div class="sugestoes-wrap" id="sugestoes-container">Carregando...</div>
     </div>
   </div>
 
@@ -228,10 +246,64 @@ async function carregarAvaliacoes(){
   aplicarFiltros();
 }
 
+const RESTAURANTES = ['Pizzaria Premium', 'The Burger Foundry', 'Bistrô Designer', 'Peso & Sabor'];
+
+function slug(nome){
+  return nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-');
+}
+
+async function carregarSugestoes(){
+  const container = document.getElementById('sugestoes-container');
+  container.innerHTML = 'Carregando...';
+  const { data, error } = await sb.from('sugestao_dia').select('*');
+  if(error){
+    container.innerHTML = '<div class="empty">Erro ao carregar sugestões: ' + error.message + '</div>';
+    return;
+  }
+  const porRestaurante = {};
+  (data || []).forEach(r => { porRestaurante[r.restaurante] = r; });
+
+  container.innerHTML = RESTAURANTES.map(nome => {
+    const id = slug(nome);
+    const registro = porRestaurante[nome];
+    const texto = registro ? (registro.texto || '') : '';
+    const atualizado = registro && registro.texto ? 'Atualizado em ' + formatarData(registro.atualizado_em) : 'Ainda sem sugestão definida';
+    return `
+      <div class="sugestao-row">
+        <div class="nome">${nome}</div>
+        <textarea id="sug-texto-${id}" placeholder="Ex: Hoje o chef sugere a Pizza Margherita Premium, feita com muçarela de búfala fresca...">${texto}</textarea>
+        <div class="sugestao-row-actions">
+          <button onclick="salvarSugestao('${nome}', '${id}')" id="sug-btn-${id}">Salvar</button>
+          <span class="sugestao-status" id="sug-status-${id}">${atualizado}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function salvarSugestao(nome, id){
+  const textarea = document.getElementById('sug-texto-' + id);
+  const btn = document.getElementById('sug-btn-' + id);
+  const status = document.getElementById('sug-status-' + id);
+  const texto = textarea.value.trim();
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  const { error } = await sb
+    .from('sugestao_dia')
+    .upsert({ restaurante: nome, texto, atualizado_em: new Date().toISOString() });
+  btn.disabled = false;
+  btn.textContent = 'Salvar';
+  if(error){
+    status.textContent = 'Erro ao salvar: ' + error.message;
+    return;
+  }
+  status.textContent = 'Atualizado agora mesmo';
+}
+
 function mostrarApp(){
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('app').classList.add('show');
   carregarAvaliacoes();
+  carregarSugestoes();
 }
 
 (async function init(){
