@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financeiro — A Casa & Designer</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:360px;}
+  .login-box h1{font-size:20px;color:var(--gold);margin:0 0 4px;text-align:center;}
+  .login-box p{font-size:13px;color:var(--muted);margin:0 0 24px;text-align:center;}
+  .login-box input{width:100%;padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:14px;}
+  .login-box button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;}
+  .login-err{color:#e35b5b;font-size:13px;margin-top:10px;text-align:center;min-height:16px;}
+
+  .app{display:none;}
+  .app.show{display:block;}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
+  header.top h1{font-size:18px;color:var(--gold);margin:0;}
+  header.top .nav-links{display:flex;gap:14px;font-size:13px;}
+  header.top .nav-links a{color:var(--muted);text-decoration:none;}
+  header.top .nav-links a.active{color:var(--gold);font-weight:700;}
+  header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+
+  .main{max-width:1400px;margin:0 auto;padding:20px;}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .stat-card .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;}
+  .stat-card .val{font-size:20px;font-weight:700;color:var(--gold);}
+  .stat-card.alerta .val{color:#e35b5b;}
+
+  .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .filters select{background:var(--card);color:var(--txt);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;}
+
+  .tabela-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:12px 14px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .cliente-nome{font-weight:700;}
+  .cliente-empresa{font-size:11px;color:var(--muted);}
+  .valor-cel{color:var(--gold);font-weight:700;white-space:nowrap;}
+  .tipo-badge{font-size:10px;padding:3px 8px;border-radius:10px;background:#000;border:1px solid var(--border);color:var(--muted);white-space:nowrap;}
+  .status-badge{font-size:11px;padding:4px 10px;border-radius:10px;font-weight:700;white-space:nowrap;}
+  .status-pendente{background:rgba(201,168,76,0.15);color:var(--gold);}
+  .status-pago{background:rgba(90,200,120,0.15);color:#5ac878;}
+  .status-atrasado{background:rgba(227,91,91,0.15);color:#e35b5b;}
+  .acao-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;}
+  .acao-btn:hover{border-color:var(--gold);color:var(--gold);}
+  .loading{padding:40px;text-align:center;color:var(--muted);}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+</style>
+</head>
+<body>
+
+  <div class="login-wrap" id="login-wrap">
+    <div class="login-box">
+      <h1>Financeiro</h1>
+      <p>A Casa & Designer</p>
+      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+      <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+      <button id="login-btn" onclick="fazerLogin()">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="top">
+      <h1>💰 Financeiro</h1>
+      <div class="nav-links">
+        <a href="index.html">Avaliações</a>
+        <a href="crm.html">CRM</a>
+        <a href="financeiro.html" class="active">Financeiro</a>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="fazerLogout()">Sair</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <div class="stats" id="stats"></div>
+
+      <div class="filters">
+        <select id="f-cliente" onchange="renderTabela()"></select>
+        <select id="f-status" onchange="renderTabela()">
+          <option value="">Todos os status</option>
+          <option value="pendente">Pendente</option>
+          <option value="atrasado">Atrasado</option>
+          <option value="pago">Pago</option>
+        </select>
+        <select id="f-tipo" onchange="renderTabela()">
+          <option value="">Todos os tipos</option>
+          <option value="entrada_30">Entrada (30%)</option>
+          <option value="saldo_70">Saldo (70%)</option>
+          <option value="mensalidade">Mensalidade</option>
+        </select>
+      </div>
+
+      <div class="tabela-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Vencimento</th>
+              <th>Cliente</th>
+              <th>Descrição</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+              <th>Status</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-body">
+            <tr><td colspan="7" class="loading">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const TIPO_LABELS = {
+  entrada_30: 'Entrada (30%)',
+  saldo_70: 'Saldo (70%)',
+  mensalidade: 'Mensalidade',
+};
+
+let cobrancas = [];
+
+async function fazerLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if(!email || !senha){ err.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+  if(error){ err.textContent = 'E-mail ou senha inválidos.'; return; }
+  mostrarApp();
+}
+
+async function fazerLogout(){
+  await sb.auth.signOut();
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-wrap').style.display = 'flex';
+}
+
+function fmtMoeda(v){
+  if(v == null) return 'R$ 0,00';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function fmtDataCurta(iso){
+  if(!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('pt-BR');
+}
+
+async function carregarCobrancas(){
+  const { data, error } = await sb
+    .from('financeiro_cobrancas')
+    .select('*, crm_contatos(nome, empresa)')
+    .order('vencimento', { ascending: true });
+
+  if(error){
+    document.getElementById('tabela-body').innerHTML = `<tr><td colspan="7" class="empty">Erro ao carregar: ${error.message}</td></tr>`;
+    return;
+  }
+
+  cobrancas = data || [];
+
+  // Marca automaticamente como atrasado quem passou do vencimento e ainda está pendente.
+  const hojeStr = new Date().toISOString().slice(0,10);
+  const vencidasIds = cobrancas.filter(c => c.status === 'pendente' && c.vencimento < hojeStr).map(c => c.id);
+  if(vencidasIds.length > 0){
+    await sb.from('financeiro_cobrancas').update({ status: 'atrasado' }).in('id', vencidasIds);
+    cobrancas.forEach(c => { if(vencidasIds.includes(c.id)) c.status = 'atrasado'; });
+  }
+
+  popularFiltroClientes();
+  renderStats();
+  renderTabela();
+}
+
+function popularFiltroClientes(){
+  const select = document.getElementById('f-cliente');
+  const atual = select.value;
+  const nomes = new Map();
+  cobrancas.forEach(c => {
+    if(c.crm_contatos){
+      nomes.set(c.contato_id, c.crm_contatos.nome);
+    }
+  });
+  select.innerHTML = '<option value="">Todos os clientes</option>' +
+    Array.from(nomes.entries()).map(([id, nome]) => `<option value="${id}">${nome}</option>`).join('');
+  select.value = atual || '';
+}
+
+function renderStats(){
+  const hoje = new Date();
+  const mesAtual = hoje.toISOString().slice(0,7);
+
+  const recebidoMes = cobrancas
+    .filter(c => c.status === 'pago' && c.pago_em && c.pago_em.slice(0,7) === mesAtual)
+    .reduce((s,c) => s + Number(c.valor), 0);
+
+  const aReceberMes = cobrancas
+    .filter(c => c.status !== 'pago' && c.vencimento.slice(0,7) === mesAtual)
+    .reduce((s,c) => s + Number(c.valor), 0);
+
+  const emAtraso = cobrancas
+    .filter(c => c.status === 'atrasado')
+    .reduce((s,c) => s + Number(c.valor), 0);
+
+  const pipelineTotal = cobrancas
+    .filter(c => c.status !== 'pago')
+    .reduce((s,c) => s + Number(c.valor), 0);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="lbl">Recebido este mês</div><div class="val">${fmtMoeda(recebidoMes)}</div></div>
+    <div class="stat-card"><div class="lbl">A receber este mês</div><div class="val">${fmtMoeda(aReceberMes)}</div></div>
+    <div class="stat-card alerta"><div class="lbl">Em atraso</div><div class="val">${fmtMoeda(emAtraso)}</div></div>
+    <div class="stat-card"><div class="lbl">Pipeline total (pendente)</div><div class="val">${fmtMoeda(pipelineTotal)}</div></div>
+  `;
+}
+
+function renderTabela(){
+  const fCliente = document.getElementById('f-cliente').value;
+  const fStatus = document.getElementById('f-status').value;
+  const fTipo = document.getElementById('f-tipo').value;
+
+  let lista = cobrancas.slice();
+  if(fCliente) lista = lista.filter(c => c.contato_id === fCliente);
+  if(fStatus) lista = lista.filter(c => c.status === fStatus);
+  if(fTipo) lista = lista.filter(c => c.tipo === fTipo);
+
+  const tbody = document.getElementById('tabela-body');
+
+  if(lista.length === 0){
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma cobrança encontrada.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = lista.map(c => {
+    const nome = c.crm_contatos ? c.crm_contatos.nome : '—';
+    const empresa = c.crm_contatos && c.crm_contatos.empresa ? c.crm_contatos.empresa : '';
+    const acao = c.status === 'pago'
+      ? `<button class="acao-btn" onclick="reverterPagamento('${c.id}')">Reverter</button>`
+      : `<button class="acao-btn" onclick="marcarComoPago('${c.id}')">Marcar como pago</button>`;
+
+    return `
+      <tr>
+        <td>${fmtDataCurta(c.vencimento)}</td>
+        <td><div class="cliente-nome">${nome}</div>${empresa ? `<div class="cliente-empresa">${empresa}</div>` : ''}</td>
+        <td>${c.descricao}</td>
+        <td><span class="tipo-badge">${TIPO_LABELS[c.tipo] || c.tipo}</span></td>
+        <td class="valor-cel">${fmtMoeda(c.valor)}</td>
+        <td><span class="status-badge status-${c.status}">${c.status}</span></td>
+        <td>${acao}</td>
+      </tr>`;
+  }).join('');
+}
+
+async function marcarComoPago(id){
+  const hojeStr = new Date().toISOString().slice(0,10);
+  const { error } = await sb.from('financeiro_cobrancas').update({ status: 'pago', pago_em: hojeStr }).eq('id', id);
+  if(error){ alert('Erro ao atualizar: ' + error.message); return; }
+  await carregarCobrancas();
+}
+
+async function reverterPagamento(id){
+  if(!confirm('Reverter esta cobrança para pendente?')) return;
+  const { error } = await sb.from('financeiro_cobrancas').update({ status: 'pendente', pago_em: null }).eq('id', id);
+  if(error){ alert('Erro ao atualizar: ' + error.message); return; }
+  await carregarCobrancas();
+}
+
+function mostrarApp(){
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  carregarCobrancas();
+}
+
+(async function init(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ mostrarApp(); }
+})();
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if(e.key === 'Enter') fazerLogin();
+});
+</script>
+</body>
+</html>

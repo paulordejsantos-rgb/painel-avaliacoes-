@@ -123,6 +123,7 @@
       <div class="nav-links">
         <a href="index.html">Avaliações</a>
         <a href="crm.html" class="active">CRM</a>
+        <a href="financeiro.html">Financeiro</a>
       </div>
       <div style="display:flex;gap:10px;">
         <button class="btn-novo" onclick="abrirNovoContato()">+ Novo Contato</button>
@@ -198,8 +199,11 @@
         <option value="perdido">Perdido</option>
       </select>
 
-      <label>Valor estimado (R$)</label>
+      <label>Valor estimado (R$) — implantação</label>
       <input type="number" id="c-valor" placeholder="0.00" step="0.01">
+
+      <label>Valor mensal (R$) — após período de teste</label>
+      <input type="number" id="c-valor-mensal" placeholder="0.00" step="0.01">
 
       <label>Próximo contato</label>
       <input type="date" id="c-proximo">
@@ -452,6 +456,7 @@ function abrirNovoContato(){
   document.getElementById('c-origem').value = '';
   document.getElementById('c-estagio').value = 'novo_lead';
   document.getElementById('c-valor').value = '';
+  document.getElementById('c-valor-mensal').value = '';
   document.getElementById('c-proximo').value = '';
   document.getElementById('c-notas').value = '';
   document.getElementById('interacoes-section').style.display = 'none';
@@ -473,6 +478,7 @@ async function abrirEditarContato(id){
   document.getElementById('c-origem').value = c.origem || '';
   document.getElementById('c-estagio').value = c.estagio || 'novo_lead';
   document.getElementById('c-valor').value = c.valor_estimado || '';
+  document.getElementById('c-valor-mensal').value = c.valor_mensal || '';
   document.getElementById('c-proximo').value = c.proximo_contato || '';
   document.getElementById('c-notas').value = c.notas || '';
   document.getElementById('interacoes-section').style.display = 'block';
@@ -514,6 +520,44 @@ function fecharModal(){
   document.getElementById('modal-bg').classList.remove('open');
 }
 
+async function gerarCobrancasFinanceiro(contatoId, valorEstimado, valorMensal){
+  // Evita gerar duplicado se o contato já passou por aqui antes.
+  const { data: existente } = await sb.from('financeiro_cobrancas').select('id').eq('contato_id', contatoId).limit(1);
+  if(existente && existente.length > 0) return;
+
+  const valor = parseFloat(valorEstimado);
+  if(!valor || valor <= 0) return;
+
+  const hoje = new Date();
+  const addDias = (d) => { const dt = new Date(hoje); dt.setDate(dt.getDate() + d); return dt.toISOString().slice(0,10); };
+
+  const entrada = Math.round(valor * 0.30 * 100) / 100;
+  const saldo = Math.round((valor - entrada) * 100) / 100;
+
+  const cobrancas = [
+    { contato_id: contatoId, descricao: 'Entrada (30%) — implantação', tipo: 'entrada_30', valor: entrada, vencimento: addDias(0), status: 'pendente' },
+    { contato_id: contatoId, descricao: 'Saldo (70%) — implantação', tipo: 'saldo_70', valor: saldo, vencimento: addDias(30), status: 'pendente' },
+  ];
+
+  const mensal = parseFloat(valorMensal);
+  if(mensal && mensal > 0){
+    for(let i = 1; i <= 12; i++){
+      cobrancas.push({
+        contato_id: contatoId,
+        descricao: `Mensalidade ${i}/12`,
+        tipo: 'mensalidade',
+        parcela_numero: i,
+        valor: mensal,
+        vencimento: addDias(60 + 30 * (i - 1)),
+        status: 'pendente',
+      });
+    }
+  }
+
+  await sb.from('financeiro_cobrancas').insert(cobrancas);
+  await sb.from('crm_contatos').update({ cobrancas_geradas: true }).eq('id', contatoId);
+}
+
 async function salvarContato(){
   const nome = document.getElementById('c-nome').value.trim();
   if(!nome){ alert('Preencha o nome do contato.'); return; }
@@ -526,6 +570,7 @@ async function salvarContato(){
     origem: document.getElementById('c-origem').value.trim() || null,
     estagio: document.getElementById('c-estagio').value,
     valor_estimado: document.getElementById('c-valor').value || null,
+    valor_mensal: document.getElementById('c-valor-mensal').value || null,
     proximo_contato: document.getElementById('c-proximo').value || null,
     notas: document.getElementById('c-notas').value.trim() || null,
     atualizado_em: new Date().toISOString(),
@@ -550,6 +595,10 @@ async function salvarContato(){
       estagio_anterior: editandoId ? estagioAntesDeEditar : null,
       estagio_novo: payload.estagio,
     });
+  }
+
+  if(!error && payload.estagio === 'contrato_assinado' && (!editandoId || estagioAntesDeEditar !== 'contrato_assinado')){
+    await gerarCobrancasFinanceiro(novoId, payload.valor_estimado, payload.valor_mensal);
   }
 
   btn.disabled = false;
