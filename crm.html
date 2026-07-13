@@ -73,6 +73,35 @@
   .add-interacao button{padding:8px 14px;border-radius:8px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:12px;cursor:pointer;}
 
   .loading{padding:40px;text-align:center;color:var(--muted);}
+
+  .tabs{display:flex;gap:8px;margin-bottom:18px;}
+  .tab-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:9px 18px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;}
+  .tab-btn.active{background:var(--gold);color:#000;border-color:var(--gold);}
+
+  .followups-wrap{margin-bottom:22px;}
+  .followups-title{font-size:13px;color:var(--gold);font-weight:700;margin-bottom:10px;}
+  .followups-list{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;}
+  .followup-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;min-width:200px;cursor:pointer;}
+  .followup-card:hover{border-color:var(--gold);}
+  .followup-card.vencido{border-color:#e35b5b;}
+  .followup-card .nome{font-size:13px;font-weight:700;}
+  .followup-card .empresa{font-size:11px;color:var(--muted);margin-top:2px;}
+  .followup-card .data{font-size:11px;margin-top:6px;color:#e8b84a;font-weight:700;}
+  .followup-card.vencido .data{color:#e35b5b;}
+  .followups-empty{font-size:12px;color:var(--muted);}
+
+  .relatorio-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:18px;}
+  .relatorio-section h3{color:var(--gold);font-size:14px;margin:0 0 16px;}
+  .funil-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .funil-label{width:150px;font-size:12px;color:var(--txt);flex-shrink:0;}
+  .funil-bar-wrap{flex:1;background:#000;border-radius:6px;overflow:hidden;height:22px;}
+  .funil-bar{background:var(--gold);height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;box-sizing:border-box;transition:width 0.3s;}
+  .funil-bar span{font-size:11px;font-weight:700;color:#000;}
+  .funil-count{width:36px;text-align:right;font-size:12px;color:var(--muted);flex-shrink:0;}
+  .tempo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
+  .tempo-card{background:#000;border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+  .tempo-card .lbl{font-size:11px;color:var(--muted);margin-bottom:4px;}
+  .tempo-card .val{font-size:18px;font-weight:700;color:var(--gold);}
 </style>
 </head>
 <body>
@@ -102,9 +131,37 @@
     </header>
 
     <div class="main">
-      <div class="stats" id="stats"></div>
-      <div class="board" id="board">
-        <div class="loading">Carregando...</div>
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-funil" onclick="mudarAba('funil')">Funil</button>
+        <button class="tab-btn" id="tab-relatorios" onclick="mudarAba('relatorios')">Relatórios</button>
+      </div>
+
+      <div id="view-funil">
+        <div class="stats" id="stats"></div>
+
+        <div class="followups-wrap" id="followups-wrap">
+          <div class="followups-title">⏰ Follow-ups pendentes</div>
+          <div class="followups-list" id="followups-list"></div>
+        </div>
+
+        <div class="board" id="board">
+          <div class="loading">Carregando...</div>
+        </div>
+      </div>
+
+      <div id="view-relatorios" style="display:none;">
+        <div class="relatorio-section">
+          <h3>Funil por estágio</h3>
+          <div id="funil-chart"></div>
+        </div>
+        <div class="relatorio-section">
+          <h3>Conversão</h3>
+          <div class="tempo-grid" id="conversao-stats"></div>
+        </div>
+        <div class="relatorio-section">
+          <h3>Tempo médio no estágio atual</h3>
+          <div class="tempo-grid" id="tempo-stats"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -184,6 +241,9 @@ const ESTAGIOS = [
 
 let contatos = [];
 let editandoId = null;
+let estagioAntesDeEditar = null;
+let abaAtiva = 'funil';
+let historicoEstagios = [];
 
 async function fazerLogin(){
   const email = document.getElementById('login-email').value.trim();
@@ -264,6 +324,109 @@ function renderBoard(){
   }).join('');
 }
 
+function renderFollowups(){
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  const limite = new Date(hoje);
+  limite.setDate(limite.getDate() + 3);
+  const hojeStr = hoje.toISOString().slice(0,10);
+  const limiteStr = limite.toISOString().slice(0,10);
+
+  const pendentes = contatos
+    .filter(c => c.proximo_contato && c.proximo_contato <= limiteStr && !['cliente_inativo','perdido'].includes(c.estagio))
+    .sort((a,b) => a.proximo_contato.localeCompare(b.proximo_contato));
+
+  const wrap = document.getElementById('followups-wrap');
+  const list = document.getElementById('followups-list');
+
+  if(pendentes.length === 0){
+    list.innerHTML = '<div class="followups-empty">Nenhum follow-up vencido ou nos próximos 3 dias. 🎉</div>';
+    return;
+  }
+
+  list.innerHTML = pendentes.map(c => {
+    const vencido = c.proximo_contato < hojeStr;
+    return `
+      <div class="followup-card ${vencido ? 'vencido' : ''}" onclick="abrirEditarContato('${c.id}')">
+        <div class="nome">${c.nome}</div>
+        ${c.empresa ? `<div class="empresa">${c.empresa}</div>` : ''}
+        <div class="data">${vencido ? '⚠ Vencido em ' : '📅 '}${fmtDataCurta(c.proximo_contato)}</div>
+      </div>`;
+  }).join('');
+}
+
+function mudarAba(aba){
+  abaAtiva = aba;
+  document.getElementById('tab-funil').classList.toggle('active', aba === 'funil');
+  document.getElementById('tab-relatorios').classList.toggle('active', aba === 'relatorios');
+  document.getElementById('view-funil').style.display = aba === 'funil' ? 'block' : 'none';
+  document.getElementById('view-relatorios').style.display = aba === 'relatorios' ? 'block' : 'none';
+  if(aba === 'relatorios') carregarRelatorios();
+}
+
+async function carregarRelatorios(){
+  document.getElementById('funil-chart').innerHTML = '<div class="loading">Carregando...</div>';
+  const { data, error } = await sb.from('crm_estagio_historico').select('*').order('criado_em', { ascending: true });
+  if(!error) historicoEstagios = data || [];
+  renderFunilChart();
+  renderConversao();
+  renderTempoEstagio();
+}
+
+function renderFunilChart(){
+  const maxCount = Math.max(1, ...ESTAGIOS.map(e => contatos.filter(c => c.estagio === e.id).length));
+  document.getElementById('funil-chart').innerHTML = ESTAGIOS.map(est => {
+    const count = contatos.filter(c => c.estagio === est.id).length;
+    const pct = Math.round((count / maxCount) * 100);
+    return `
+      <div class="funil-row">
+        <div class="funil-label">${est.label}</div>
+        <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%"><span>${count > 0 ? count : ''}</span></div></div>
+        <div class="funil-count">${count}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderConversao(){
+  const total = contatos.length;
+  const ativos = contatos.filter(c => c.estagio === 'cliente_ativo').length;
+  const perdidos = contatos.filter(c => c.estagio === 'perdido').length;
+  const emAndamento = total - ativos - perdidos - contatos.filter(c => c.estagio === 'cliente_inativo').length;
+  const taxaFechamento = total > 0 ? ((ativos / total) * 100).toFixed(1) : '0.0';
+  const taxaPerda = total > 0 ? ((perdidos / total) * 100).toFixed(1) : '0.0';
+
+  document.getElementById('conversao-stats').innerHTML = `
+    <div class="tempo-card"><div class="lbl">Taxa de fechamento</div><div class="val">${taxaFechamento}%</div></div>
+    <div class="tempo-card"><div class="lbl">Taxa de perda</div><div class="val">${taxaPerda}%</div></div>
+    <div class="tempo-card"><div class="lbl">Em andamento</div><div class="val">${emAndamento}</div></div>
+  `;
+}
+
+function renderTempoEstagio(){
+  const agora = new Date();
+  const porContato = {};
+  historicoEstagios.forEach(h => {
+    if(!porContato[h.contato_id] || new Date(h.criado_em) > new Date(porContato[h.contato_id].criado_em)){
+      porContato[h.contato_id] = h;
+    }
+  });
+
+  const diasPorEstagio = {};
+  contatos.forEach(c => {
+    const ultimaTransicao = porContato[c.id];
+    const desde = ultimaTransicao ? new Date(ultimaTransicao.criado_em) : new Date(c.criado_em);
+    const dias = Math.max(0, Math.round((agora - desde) / (1000*60*60*24)));
+    if(!diasPorEstagio[c.estagio]) diasPorEstagio[c.estagio] = [];
+    diasPorEstagio[c.estagio].push(dias);
+  });
+
+  document.getElementById('tempo-stats').innerHTML = ESTAGIOS.map(est => {
+    const lista = diasPorEstagio[est.id] || [];
+    const media = lista.length ? Math.round(lista.reduce((a,b) => a+b, 0) / lista.length) : null;
+    return `<div class="tempo-card"><div class="lbl">${est.label}</div><div class="val">${media != null ? media + ' dia' + (media === 1 ? '' : 's') : '—'}</div></div>`;
+  }).join('');
+}
+
 async function carregarContatos(){
   document.getElementById('board').innerHTML = '<div class="loading">Carregando...</div>';
   const { data, error } = await sb.from('crm_contatos').select('*').order('criado_em', { ascending: false });
@@ -274,10 +437,12 @@ async function carregarContatos(){
   contatos = data || [];
   renderStats();
   renderBoard();
+  renderFollowups();
 }
 
 function abrirNovoContato(){
   editandoId = null;
+  estagioAntesDeEditar = null;
   document.getElementById('modal-titulo').textContent = 'Novo Contato';
   document.getElementById('c-id').value = '';
   document.getElementById('c-nome').value = '';
@@ -298,6 +463,7 @@ async function abrirEditarContato(id){
   const c = contatos.find(x => x.id === id);
   if(!c) return;
   editandoId = id;
+  estagioAntesDeEditar = c.estagio;
   document.getElementById('modal-titulo').textContent = 'Editar Contato';
   document.getElementById('c-id').value = c.id;
   document.getElementById('c-nome').value = c.nome || '';
@@ -369,11 +535,21 @@ async function salvarContato(){
   btn.disabled = true;
   btn.textContent = 'Salvando...';
 
-  let error;
+  let error, novoId = editandoId;
   if(editandoId){
     ({ error } = await sb.from('crm_contatos').update(payload).eq('id', editandoId));
   } else {
-    ({ error } = await sb.from('crm_contatos').insert(payload));
+    const resultado = await sb.from('crm_contatos').insert(payload).select().single();
+    error = resultado.error;
+    if(resultado.data) novoId = resultado.data.id;
+  }
+
+  if(!error && (!editandoId || payload.estagio !== estagioAntesDeEditar)){
+    await sb.from('crm_estagio_historico').insert({
+      contato_id: novoId,
+      estagio_anterior: editandoId ? estagioAntesDeEditar : null,
+      estagio_novo: payload.estagio,
+    });
   }
 
   btn.disabled = false;
