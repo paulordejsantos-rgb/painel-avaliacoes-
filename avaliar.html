@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avalie sua experiência</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:420px;}
+  .box h1{font-size:20px;color:var(--gold);margin:0 0 4px;text-align:center;}
+  .box p.sub{font-size:13px;color:var(--muted);margin:0 0 28px;text-align:center;}
+
+  .campo{margin-bottom:22px;}
+  .campo label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;text-align:center;}
+
+  .estrelas{display:flex;justify-content:center;gap:6px;}
+  .estrelas button{background:none;border:none;font-size:32px;line-height:1;cursor:pointer;color:var(--border);padding:0;transition:color .15s;}
+  .estrelas button.ativa{color:var(--gold);}
+  .estrelas button:hover{color:var(--gold);}
+
+  textarea{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:14px;font-family:inherit;min-height:90px;resize:vertical;}
+
+  button.enviar{width:100%;padding:13px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;}
+  button.enviar:disabled{opacity:0.5;cursor:not-allowed;}
+
+  .msg{font-size:13px;margin-top:14px;text-align:center;min-height:16px;}
+  .msg.erro{color:#e35b5b;}
+  .msg.ok{color:#5ac878;}
+
+  .sucesso{text-align:center;padding:20px 0;}
+  .sucesso .icone{font-size:40px;margin-bottom:12px;}
+  .sucesso h2{color:var(--gold);font-size:18px;margin:0 0 8px;}
+  .sucesso p{color:var(--muted);font-size:13px;margin:0;}
+</style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div class="box" id="box">
+      <div id="form-area">
+        <h1>Avalie sua experiência</h1>
+        <p class="sub" id="nome-restaurante">Carregando...</p>
+
+        <div class="campo">
+          <label>Ambiente / Restaurante</label>
+          <div class="estrelas" id="estrelas-ambiente" data-valor="0"></div>
+        </div>
+
+        <div class="campo">
+          <label>Cardápio digital</label>
+          <div class="estrelas" id="estrelas-digital" data-valor="0"></div>
+        </div>
+
+        <div class="campo">
+          <label>Comentário (opcional)</label>
+          <textarea id="comentario" placeholder="Conte como foi sua experiência..."></textarea>
+        </div>
+
+        <button class="enviar" id="btn-enviar" onclick="enviarAvaliacao()">Enviar avaliação</button>
+        <div class="msg" id="msg"></div>
+      </div>
+
+      <div class="sucesso" id="sucesso" style="display:none;">
+        <div class="icone">✅</div>
+        <h2>Obrigado pela avaliação!</h2>
+        <p>Sua opinião foi enviada com sucesso.</p>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const RESTAURANTES_POR_SLUG = {
+  'pizzaria-premium': 'Pizzaria Premium',
+  'burger-foundry': 'The Burger Foundry',
+  'bistro-elegante': 'Bistrô Elegante',
+  'peso-e-sabor': 'Peso & Sabor'
+};
+
+function restauranteAtual(){
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get('r');
+  return RESTAURANTES_POR_SLUG[slug] || null;
+}
+
+function montarEstrelas(containerId){
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  for(let i = 1; i <= 5; i++){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '★';
+    btn.onclick = () => {
+      container.dataset.valor = i;
+      Array.from(container.children).forEach((el, idx) => {
+        el.classList.toggle('ativa', idx < i);
+      });
+    };
+    container.appendChild(btn);
+  }
+}
+
+function mostrarMsg(texto, tipo){
+  const el = document.getElementById('msg');
+  el.textContent = texto;
+  el.className = 'msg ' + (tipo || '');
+}
+
+async function enviarAvaliacao(){
+  const restaurante = restauranteAtual();
+  if(!restaurante){
+    mostrarMsg('Link inválido: restaurante não identificado.', 'erro');
+    return;
+  }
+
+  const notaAmbiente = parseInt(document.getElementById('estrelas-ambiente').dataset.valor, 10);
+  const notaDigital = parseInt(document.getElementById('estrelas-digital').dataset.valor, 10);
+  const comentario = document.getElementById('comentario').value.trim();
+
+  if(!notaAmbiente || !notaDigital){
+    mostrarMsg('Por favor, avalie os dois itens antes de enviar.', 'erro');
+    return;
+  }
+
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  mostrarMsg('', '');
+
+  const { error } = await sb.from('avaliacoes').insert({
+    restaurante,
+    tipo: 'cardapio_digital',
+    nota_tradicional: notaAmbiente,
+    nota_digital: notaDigital,
+    sugestao: comentario || null
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Enviar avaliação';
+
+  if(error){
+    mostrarMsg('Erro ao enviar: ' + error.message, 'erro');
+    return;
+  }
+
+  document.getElementById('form-area').style.display = 'none';
+  document.getElementById('sucesso').style.display = 'block';
+}
+
+(function init(){
+  const restaurante = restauranteAtual();
+  const subtitulo = document.getElementById('nome-restaurante');
+  if(!restaurante){
+    subtitulo.textContent = 'Link inválido — restaurante não encontrado.';
+    document.getElementById('btn-enviar').disabled = true;
+    return;
+  }
+  subtitulo.textContent = restaurante;
+  montarEstrelas('estrelas-ambiente');
+  montarEstrelas('estrelas-digital');
+})();
+</script>
+</body>
+</html>

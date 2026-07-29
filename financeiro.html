@@ -291,7 +291,26 @@ async function reverterPagamento(id){
   await carregarCobrancas();
 }
 
-function mostrarApp(){
+const SLUG_POR_RESTAURANTE = {
+  'Pizzaria Premium': 'pizzaria-premium',
+  'The Burger Foundry': 'burger-foundry',
+  'Bistrô Elegante': 'bistro-elegante',
+  'Peso & Sabor': 'peso-e-sabor'
+};
+
+async function redirecionarSeRestaurante(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return false;
+  const { data } = await sb.from('perfis_restaurante').select('restaurante').eq('user_id', user.id).maybeSingle();
+  if(data && data.restaurante && SLUG_POR_RESTAURANTE[data.restaurante]){
+    window.location.href = '/' + SLUG_POR_RESTAURANTE[data.restaurante] + '/';
+    return true;
+  }
+  return false;
+}
+
+async function mostrarApp(){
+  if(await redirecionarSeRestaurante()) return;
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('app').classList.add('show');
   carregarCobrancas();

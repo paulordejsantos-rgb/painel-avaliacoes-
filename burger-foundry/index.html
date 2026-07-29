@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Painel de Avaliações — A Casa & Designer</title>
+<title>Painel de Avaliações</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -53,17 +53,6 @@
   .muted{color:var(--muted);}
   .empty{padding:40px;text-align:center;color:var(--muted);}
   .loading{padding:40px;text-align:center;color:var(--muted);}
-
-  .section-title{font-size:15px;color:var(--gold);margin:32px 0 12px;font-weight:700;}
-  .sugestoes-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;}
-  .sugestao-row{border-bottom:1px solid var(--border);padding-bottom:14px;}
-  .sugestao-row:last-child{border-bottom:none;padding-bottom:0;}
-  .sugestao-row .nome{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:8px;}
-  .sugestao-row textarea{width:100%;min-height:56px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;margin-bottom:8px;}
-  .sugestao-row-actions{display:flex;align-items:center;gap:10px;}
-  .sugestao-row button{padding:8px 16px;border-radius:8px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:12px;cursor:pointer;}
-  .sugestao-row button:disabled{opacity:0.5;cursor:not-allowed;}
-  .sugestao-status{font-size:11px;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -71,7 +60,7 @@
   <div class="login-wrap" id="login-wrap">
     <div class="login-box">
       <h1>Painel de Avaliações</h1>
-      <p>A Casa & Designer</p>
+      <p>Acesso do restaurante</p>
       <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
       <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
       <button id="login-btn" onclick="fazerLogin()">Entrar</button>
@@ -81,12 +70,7 @@
 
   <div class="app" id="app">
     <header class="top">
-      <h1>⭐ Painel de Avaliações</h1>
-      <div style="display:flex;gap:14px;font-size:13px;">
-        <a href="index.html" style="color:var(--gold);font-weight:700;text-decoration:none;">Avaliações</a>
-        <a href="crm.html" style="color:var(--muted);text-decoration:none;">CRM</a>
-        <a href="financeiro.html" style="color:var(--muted);text-decoration:none;">Financeiro</a>
-      </div>
+      <h1 id="titulo-header">⭐ Painel de Avaliações</h1>
       <button onclick="fazerLogout()">Sair</button>
     </header>
 
@@ -94,13 +78,6 @@
       <div class="stats" id="stats"></div>
 
       <div class="filters">
-        <select id="filtro-restaurante" onchange="aplicarFiltros()">
-          <option value="">Todos os restaurantes</option>
-          <option value="Pizzaria Premium">Pizzaria Premium</option>
-          <option value="The Burger Foundry">The Burger Foundry</option>
-          <option value="Bistrô Elegante">Bistrô Elegante</option>
-          <option value="Peso & Sabor">Peso & Sabor</option>
-        </select>
         <select id="filtro-tipo" onchange="aplicarFiltros()">
           <option value="">Todos os tipos</option>
           <option value="cardapio_digital">Cardápio digital</option>
@@ -111,9 +88,6 @@
       <div class="table-wrap">
         <div id="tabela-container" class="loading">Carregando...</div>
       </div>
-
-      <div class="section-title">🍽️ Sugestão do Dia (do garçom)</div>
-      <div class="sugestoes-wrap" id="sugestoes-container">Carregando...</div>
     </div>
   </div>
 
@@ -164,8 +138,6 @@ function formatarData(iso){
 
 function renderStats(lista){
   const total = lista.length;
-  const porRestaurante = {};
-  lista.forEach(a => { porRestaurante[a.restaurante] = (porRestaurante[a.restaurante]||0)+1; });
 
   const notasDigital = lista.filter(a => a.tipo === 'cardapio_digital' && a.nota_digital != null).map(a => a.nota_digital);
   const mediaDigital = notasDigital.length ? (notasDigital.reduce((a,b)=>a+b,0)/notasDigital.length).toFixed(1) : '—';
@@ -198,7 +170,6 @@ function renderTabela(lista){
     return `
       <tr>
         <td class="muted">${formatarData(a.created_at)}</td>
-        <td>${a.restaurante}</td>
         <td class="muted">${a.mesa || '—'}</td>
         <td><span class="tag ${tagClass}">${tagLabel}</span></td>
         <td>${notasCol}</td>
@@ -211,7 +182,6 @@ function renderTabela(lista){
       <thead>
         <tr>
           <th>Data</th>
-          <th>Restaurante</th>
           <th>Mesa</th>
           <th>Tipo</th>
           <th>Notas</th>
@@ -224,10 +194,8 @@ function renderTabela(lista){
 }
 
 function aplicarFiltros(){
-  const restaurante = document.getElementById('filtro-restaurante').value;
   const tipo = document.getElementById('filtro-tipo').value;
   let lista = todasAvaliacoes;
-  if(restaurante) lista = lista.filter(a => a.restaurante === restaurante);
   if(tipo) lista = lista.filter(a => a.tipo === tipo);
   renderStats(lista);
   renderTabela(lista);
@@ -247,83 +215,20 @@ async function carregarAvaliacoes(){
   aplicarFiltros();
 }
 
-const RESTAURANTES = ['Pizzaria Premium', 'The Burger Foundry', 'Bistrô Elegante', 'Peso & Sabor'];
-
-function slug(nome){
-  return nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-');
-}
-
-async function carregarSugestoes(){
-  const container = document.getElementById('sugestoes-container');
-  container.innerHTML = 'Carregando...';
-  const { data, error } = await sb.from('sugestao_dia').select('*');
-  if(error){
-    container.innerHTML = '<div class="empty">Erro ao carregar sugestões: ' + error.message + '</div>';
-    return;
-  }
-  const porRestaurante = {};
-  (data || []).forEach(r => { porRestaurante[r.restaurante] = r; });
-
-  container.innerHTML = RESTAURANTES.map(nome => {
-    const id = slug(nome);
-    const registro = porRestaurante[nome];
-    const texto = registro ? (registro.texto || '') : '';
-    const atualizado = registro && registro.texto ? 'Atualizado em ' + formatarData(registro.atualizado_em) : 'Ainda sem sugestão definida';
-    return `
-      <div class="sugestao-row">
-        <div class="nome">${nome}</div>
-        <textarea id="sug-texto-${id}" placeholder="Ex: Hoje o chef sugere a Pizza Margherita Premium, feita com muçarela de búfala fresca...">${texto}</textarea>
-        <div class="sugestao-row-actions">
-          <button onclick="salvarSugestao('${nome}', '${id}')" id="sug-btn-${id}">Salvar</button>
-          <span class="sugestao-status" id="sug-status-${id}">${atualizado}</span>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-async function salvarSugestao(nome, id){
-  const textarea = document.getElementById('sug-texto-' + id);
-  const btn = document.getElementById('sug-btn-' + id);
-  const status = document.getElementById('sug-status-' + id);
-  const texto = textarea.value.trim();
-  btn.disabled = true;
-  btn.textContent = 'Salvando...';
-  const { error } = await sb
-    .from('sugestao_dia')
-    .upsert({ restaurante: nome, texto, atualizado_em: new Date().toISOString() });
-  btn.disabled = false;
-  btn.textContent = 'Salvar';
-  if(error){
-    status.textContent = 'Erro ao salvar: ' + error.message;
-    return;
-  }
-  status.textContent = 'Atualizado agora mesmo';
-}
-
-const SLUG_POR_RESTAURANTE = {
-  'Pizzaria Premium': 'pizzaria-premium',
-  'The Burger Foundry': 'burger-foundry',
-  'Bistrô Elegante': 'bistro-elegante',
-  'Peso & Sabor': 'peso-e-sabor'
-};
-
-async function redirecionarSeRestaurante(){
+async function carregarNomeRestaurante(){
   const { data: { user } } = await sb.auth.getUser();
-  if(!user) return false;
+  if(!user) return;
   const { data } = await sb.from('perfis_restaurante').select('restaurante').eq('user_id', user.id).maybeSingle();
-  if(data && data.restaurante && SLUG_POR_RESTAURANTE[data.restaurante]){
-    window.location.href = '/' + SLUG_POR_RESTAURANTE[data.restaurante] + '/';
-    return true;
+  if(data && data.restaurante){
+    document.getElementById('titulo-header').textContent = '⭐ ' + data.restaurante;
   }
-  return false;
 }
 
-async function mostrarApp(){
-  if(await redirecionarSeRestaurante()) return;
+function mostrarApp(){
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('app').classList.add('show');
+  carregarNomeRestaurante();
   carregarAvaliacoes();
-  carregarSugestoes();
 }
 
 (async function init(){
