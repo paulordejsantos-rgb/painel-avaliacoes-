@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leads — A Casa & Designer</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="icon" href="assets/images/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="assets/images/favicon-64.png" sizes="64x64" type="image/png">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Painel A&D">
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:360px;}
+  .login-box h1{font-size:20px;color:var(--gold);margin:0 0 4px;text-align:center;}
+  .login-box p{font-size:13px;color:var(--muted);margin:0 0 24px;text-align:center;}
+  .login-box input{width:100%;padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:14px;}
+  .login-box button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;}
+  .login-err{color:#e35b5b;font-size:13px;margin-top:10px;text-align:center;min-height:16px;}
+
+  .app{display:none;}
+  .app.show{display:block;}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
+  header.top h1{font-size:18px;color:var(--gold);margin:0;}
+  header.top .nav-links{display:flex;gap:14px;font-size:13px;}
+  header.top .nav-links a{color:var(--muted);text-decoration:none;}
+  header.top .nav-links a.active{color:var(--gold);font-weight:700;}
+  header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+  .btn-novo{background:var(--gold) !important;color:#000 !important;font-weight:700;border:none !important;}
+
+  .main{max-width:1400px;margin:0 auto;padding:20px;}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .stat-card .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;}
+  .stat-card .val{font-size:20px;font-weight:700;color:var(--gold);}
+  .stat-card.alerta .val{color:#e35b5b;}
+
+  .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .filters select{background:var(--card);color:var(--txt);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;}
+
+  .tabela-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:12px 14px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr.lead-row{cursor:pointer;}
+  tr.lead-row:hover{background:rgba(201,168,76,0.05);}
+  .lead-nome{font-weight:700;}
+  .lead-restaurante{font-size:11px;color:var(--muted);}
+  .valor-cel{color:var(--gold);font-weight:700;white-space:nowrap;}
+  .status-badge{font-size:11px;padding:4px 10px;border-radius:10px;font-weight:700;white-space:nowrap;}
+  .status-novo{background:rgba(122,176,232,0.15);color:#7ab0e8;}
+  .status-contatado{background:rgba(201,168,76,0.15);color:var(--gold);}
+  .status-proposta_enviada{background:rgba(232,184,74,0.15);color:#e8b84a;}
+  .status-negociacao{background:rgba(180,120,220,0.15);color:#b478dc;}
+  .status-fechado{background:rgba(90,200,120,0.15);color:#5ac878;}
+  .status-perdido{background:rgba(227,91,91,0.15);color:#e35b5b;}
+  .followup-normal{font-size:11px;color:var(--muted);}
+  .followup-atencao{font-size:11px;padding:4px 10px;border-radius:10px;font-weight:700;white-space:nowrap;background:rgba(232,184,74,0.15);color:#e8b84a;}
+  .followup-urgente{font-size:11px;padding:4px 10px;border-radius:10px;font-weight:700;white-space:nowrap;background:rgba(227,91,91,0.15);color:#e35b5b;}
+  .acao-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block;}
+  .acao-btn:hover{border-color:var(--gold);color:var(--gold);}
+  .acao-btn.whatsapp:hover{border-color:#5ac878;color:#5ac878;}
+  .acao-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .acao-btn:disabled:hover{border-color:var(--border);color:var(--muted);}
+  .acao-cel{display:flex;gap:6px;flex-wrap:wrap;}
+  .cobranca-row td{padding:0;border-bottom:1px solid var(--border);}
+  .cobranca-inline{padding:14px 18px;background:rgba(201,168,76,0.04);}
+  .loading{padding:40px;text-align:center;color:var(--muted);}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;padding:20px;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;}
+  .modal h2{color:var(--gold);font-size:17px;margin:0 0 16px;}
+  .modal label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;display:block;margin-bottom:6px;margin-top:14px;}
+  .modal input, .modal select, .modal textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:13px;font-family:inherit;}
+  .modal textarea{min-height:70px;resize:vertical;}
+  .modal-row{display:flex;gap:10px;}
+  .modal-row > div{flex:1;}
+  .modal-actions{display:flex;gap:10px;margin-top:22px;}
+  .modal-actions button{flex:1;padding:11px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-salvar{background:var(--gold);color:#000;}
+  .btn-cancelar{background:transparent;border:1px solid var(--border) !important;color:var(--muted);}
+  .btn-excluir{background:transparent;border:1px solid #e35b5b !important;color:#e35b5b;margin-top:10px;width:100%;padding:10px;border-radius:8px;font-size:12px;cursor:pointer;}
+
+  .cobranca-box{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+  .cobranca-box h3{font-size:13px;color:var(--gold);margin:0 0 8px;}
+  .cobranca-aviso{font-size:12px;color:var(--muted);}
+  .btn-cobranca{width:100%;padding:11px;border-radius:8px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-weight:700;font-size:13px;cursor:pointer;}
+  .btn-cobranca:disabled{opacity:0.5;cursor:not-allowed;}
+  .cobranca-pago{font-size:12px;color:#5ac878;font-weight:700;}
+  .cobranca-link-row{display:flex;gap:8px;margin-top:12px;align-items:center;}
+  .cobranca-link-row input{flex:1;font-size:12px;}
+  .cobranca-link-row button, .cobranca-link-row a{white-space:nowrap;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--txt);font-size:12px;cursor:pointer;text-decoration:none;}
+  .cobranca-qr{margin-top:12px;text-align:center;}
+  .cobranca-qr img{background:#fff;padding:8px;border-radius:8px;}
+</style>
+</head>
+<body>
+
+  <div class="login-wrap" id="login-wrap">
+    <div class="login-box">
+      <h1>Leads</h1>
+      <p>A Casa & Designer</p>
+      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+      <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+      <button id="login-btn" onclick="fazerLogin()">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="top">
+      <h1>🎯 Leads</h1>
+      <div class="nav-links">
+        <a href="index.html">Avaliações</a>
+        <a href="crm.html">CRM</a>
+        <a href="financeiro.html">Financeiro</a>
+        <a href="leads.html" class="active">Leads</a>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-novo" onclick="abrirNovoLead()">+ Novo Lead</button>
+        <button onclick="fazerLogout()">Sair</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <div class="stats" id="stats"></div>
+
+      <div class="filters">
+        <select id="f-status" onchange="renderTabela()">
+          <option value="">Todos os status</option>
+          <option value="novo">Novo</option>
+          <option value="contatado">Contatado</option>
+          <option value="proposta_enviada">Proposta Enviada</option>
+          <option value="negociacao">Em Negociação</option>
+          <option value="fechado">Fechado</option>
+          <option value="perdido">Perdido</option>
+        </select>
+        <select id="f-ordenacao" onchange="renderTabela()">
+          <option value="recente">Mais recente primeiro</option>
+          <option value="urgente">Mais urgente primeiro</option>
+        </select>
+      </div>
+
+      <div class="tabela-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Contato / Restaurante</th>
+              <th>Telefone</th>
+              <th>Cidade/UF</th>
+              <th>Status</th>
+              <th>Plano de interesse</th>
+              <th>Valor proposta</th>
+              <th>Atualizado em</th>
+              <th>Follow-up</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-body">
+            <tr><td colspan="9" class="loading">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal lead -->
+  <div class="modal-bg" id="modal-bg">
+    <div class="modal">
+      <h2 id="modal-titulo">Novo Lead</h2>
+      <input type="hidden" id="l-id">
+
+      <label>Nome do contato *</label>
+      <input type="text" id="l-nome-contato" placeholder="Nome de quem atendeu / responsável">
+
+      <label>Nome do restaurante</label>
+      <input type="text" id="l-nome-restaurante" placeholder="Ex: Restaurante do João">
+
+      <label>Telefone / WhatsApp</label>
+      <input type="text" id="l-telefone" placeholder="(21) 90000-0000">
+
+      <div class="modal-row">
+        <div>
+          <label>Cidade</label>
+          <input type="text" id="l-cidade" placeholder="Ex: Niterói">
+        </div>
+        <div>
+          <label>Estado</label>
+          <input type="text" id="l-estado" placeholder="Ex: RJ" maxlength="2" style="text-transform:uppercase;">
+        </div>
+      </div>
+
+      <label>Origem</label>
+      <input type="text" id="l-origem" placeholder="Ex: Indicação, Instagram, site...">
+
+      <label>Status</label>
+      <select id="l-status">
+        <option value="novo">Novo</option>
+        <option value="contatado">Contatado</option>
+        <option value="proposta_enviada">Proposta Enviada</option>
+        <option value="negociacao">Em Negociação</option>
+        <option value="fechado">Fechado</option>
+        <option value="perdido">Perdido</option>
+      </select>
+
+      <label>Plano de interesse</label>
+      <input type="text" id="l-plano" placeholder="Ex: Plano Mensal, Plano Anual...">
+
+      <label>Valor da proposta (R$)</label>
+      <input type="number" id="l-valor" placeholder="0.00" step="0.01">
+
+      <label>Observações</label>
+      <textarea id="l-observacoes" placeholder="Anotações sobre esse lead..."></textarea>
+
+      <div class="cobranca-box" id="cobranca-box" style="display:none;">
+        <h3>Cobrança (Mercado Pago)</h3>
+        <div id="cobranca-conteudo"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+        <button class="btn-salvar" id="btn-salvar-lead" onclick="salvarLead()">Salvar</button>
+      </div>
+      <button class="btn-excluir" id="btn-excluir-lead" style="display:none;" onclick="excluirLead()">Excluir lead</button>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const STATUS_LABELS = {
+  novo: 'Novo',
+  contatado: 'Contatado',
+  proposta_enviada: 'Proposta Enviada',
+  negociacao: 'Em Negociação',
+  fechado: 'Fechado',
+  perdido: 'Perdido',
+};
+
+let leads = [];
+let editandoId = null;
+let cobrancaAtual = { link: null, pagoEm: null };
+const cobrancasAbertas = new Set();
+const cobrancasGerando = new Set();
+
+async function fazerLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if(!email || !senha){ err.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+  if(error){ err.textContent = 'E-mail ou senha inválidos.'; return; }
+  mostrarApp();
+}
+
+async function fazerLogout(){
+  await sb.auth.signOut();
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-wrap').style.display = 'flex';
+}
+
+function fmtMoeda(v){
+  if(v == null || v === '') return '—';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function fmtDataHora(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+
+function linkWhatsapp(telefone){
+  if(!telefone) return null;
+  let digits = telefone.replace(/\D/g, '');
+  if(!digits) return null;
+  if(digits.length <= 11) digits = '55' + digits;
+  return `https://wa.me/${digits}`;
+}
+
+const STATUS_FORA_DO_FUNIL = ['fechado', 'perdido'];
+
+function diasSemContato(dataAtualizacao){
+  const agora = new Date();
+  const d = new Date(dataAtualizacao);
+  return Math.floor((agora - d) / (1000 * 60 * 60 * 24));
+}
+
+function followupInfo(lead){
+  if(STATUS_FORA_DO_FUNIL.includes(lead.status)) return null;
+  const dias = diasSemContato(lead.data_atualizacao);
+  const texto = dias <= 0 ? 'atualizado hoje' : `há ${dias} dia${dias === 1 ? '' : 's'} sem contato`;
+  let nivel = 'normal';
+  if(dias >= 8) nivel = 'urgente';
+  else if(dias >= 4) nivel = 'atencao';
+  return { dias, texto, nivel };
+}
+
+function atualizarBadgePWA(count){
+  if(!('setAppBadge' in navigator)) return;
+  if(count > 0){
+    navigator.setAppBadge(count).catch(() => {});
+  } else if('clearAppBadge' in navigator){
+    navigator.clearAppBadge().catch(() => {});
+  }
+}
+
+async function carregarLeads(){
+  document.getElementById('tabela-body').innerHTML = '<tr><td colspan="9" class="loading">Carregando...</td></tr>';
+  const { data, error } = await sb.from('leads').select('*').order('data_atualizacao', { ascending: false });
+  if(error){
+    document.getElementById('tabela-body').innerHTML = `<tr><td colspan="9" class="empty">Erro ao carregar: ${error.message}</td></tr>`;
+    return;
+  }
+  leads = data || [];
+  renderStats();
+  renderTabela();
+}
+
+function renderStats(){
+  const total = leads.length;
+  const novos = leads.filter(l => l.status === 'novo').length;
+  const emNegociacao = leads.filter(l => ['contatado','proposta_enviada','negociacao'].includes(l.status)).length;
+  const valorPipeline = leads
+    .filter(l => !STATUS_FORA_DO_FUNIL.includes(l.status))
+    .reduce((s,l) => s + (Number(l.valor_proposta) || 0), 0);
+  const precisandoAtencao = leads.filter(l => {
+    const fu = followupInfo(l);
+    return fu && fu.nivel !== 'normal';
+  }).length;
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="lbl">Total de leads</div><div class="val">${total}</div></div>
+    <div class="stat-card"><div class="lbl">Novos</div><div class="val">${novos}</div></div>
+    <div class="stat-card"><div class="lbl">Em negociação</div><div class="val">${emNegociacao}</div></div>
+    <div class="stat-card"><div class="lbl">Valor em propostas</div><div class="val">${fmtMoeda(valorPipeline)}</div></div>
+    <div class="stat-card alerta"><div class="lbl">Precisando de atenção</div><div class="val">${precisandoAtencao} lead${precisandoAtencao === 1 ? '' : 's'}</div></div>
+  `;
+
+  atualizarBadgePWA(precisandoAtencao);
+}
+
+function renderTabela(){
+  const fStatus = document.getElementById('f-status').value;
+  const fOrdenacao = document.getElementById('f-ordenacao').value;
+  let lista = leads.slice();
+  if(fStatus) lista = lista.filter(l => l.status === fStatus);
+
+  if(fOrdenacao === 'urgente'){
+    lista.sort((a, b) => {
+      const ativoA = !STATUS_FORA_DO_FUNIL.includes(a.status);
+      const ativoB = !STATUS_FORA_DO_FUNIL.includes(b.status);
+      if(ativoA !== ativoB) return ativoA ? -1 : 1;
+      if(ativoA && ativoB) return diasSemContato(b.data_atualizacao) - diasSemContato(a.data_atualizacao);
+      return new Date(b.data_atualizacao) - new Date(a.data_atualizacao);
+    });
+  }
+
+  const tbody = document.getElementById('tabela-body');
+
+  if(lista.length === 0){
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">Nenhum lead encontrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = lista.map(l => {
+    const cidadeUf = [l.cidade, l.estado].filter(Boolean).join(' - ') || '—';
+    const wa = linkWhatsapp(l.telefone_whatsapp);
+    const acaoWhatsapp = wa
+      ? `<a class="acao-btn whatsapp" href="${wa}" target="_blank" rel="noopener" onclick="event.stopPropagation()">WhatsApp</a>`
+      : '';
+    const fu = followupInfo(l);
+    const followupCel = fu ? `<span class="followup-${fu.nivel}">${fu.texto}</span>` : '—';
+
+    return `
+      <tr class="lead-row" onclick="abrirEditarLead('${l.id}')">
+        <td><div class="lead-nome">${l.nome_contato || '—'}</div>${l.nome_restaurante ? `<div class="lead-restaurante">${l.nome_restaurante}</div>` : ''}</td>
+        <td>${l.telefone_whatsapp || '—'}</td>
+        <td>${cidadeUf}</td>
+        <td><span class="status-badge status-${l.status}">${STATUS_LABELS[l.status] || l.status}</span></td>
+        <td>${l.plano_interesse || '—'}</td>
+        <td class="valor-cel">${fmtMoeda(l.valor_proposta)}</td>
+        <td>${fmtDataHora(l.data_atualizacao)}</td>
+        <td>${followupCel}</td>
+        <td class="acao-cel">${acaoWhatsapp}${acaoCobrancaBtnHtml(l)}</td>
+      </tr>${cobrancaPainelHtml(l)}`;
+  }).join('');
+}
+
+function acaoCobrancaBtnHtml(l){
+  if(cobrancasGerando.has(l.id)){
+    return `<button class="acao-btn" disabled>Gerando...</button>`;
+  }
+  if(l.mp_payment_link){
+    const aberto = cobrancasAbertas.has(l.id);
+    return `<button class="acao-btn" onclick="event.stopPropagation(); toggleCobrancaLinha('${l.id}')">${aberto ? 'Ocultar cobrança' : 'Ver cobrança'}</button>`;
+  }
+  const habilitado = l.plano_interesse && Number(l.valor_proposta) > 0;
+  if(!habilitado){
+    return `<button class="acao-btn" disabled title="Preencha plano de interesse e valor da proposta para gerar a cobrança">Gerar cobrança</button>`;
+  }
+  return `<button class="acao-btn" onclick="event.stopPropagation(); gerarCobrancaLinha('${l.id}')">Gerar cobrança</button>`;
+}
+
+function cobrancaPainelHtml(l){
+  if(!cobrancasAbertas.has(l.id) || !l.mp_payment_link) return '';
+  const pago = l.status === 'fechado' && l.mp_pago_em;
+  const qr = qrcode(0, 'M');
+  qr.addData(l.mp_payment_link);
+  qr.make();
+  return `
+    <tr class="cobranca-row">
+      <td colspan="9">
+        <div class="cobranca-inline">
+          ${pago ? `<div class="cobranca-pago">✓ Pago em ${fmtDataHora(l.mp_pago_em)}</div>` : ''}
+          <div class="cobranca-link-row">
+            <input type="text" readonly value="${l.mp_payment_link}" onclick="this.select()" id="cobranca-link-${l.id}">
+            <button type="button" onclick="event.stopPropagation(); copiarLinkLinha('${l.id}')">Copiar</button>
+            <a href="${l.mp_payment_link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Abrir</a>
+            <button type="button" onclick="event.stopPropagation(); gerarCobrancaLinha('${l.id}')">Gerar nova</button>
+          </div>
+          <div class="cobranca-qr">${qr.createImgTag(4)}</div>
+        </div>
+      </td>
+    </tr>`;
+}
+
+function toggleCobrancaLinha(id){
+  if(cobrancasAbertas.has(id)) cobrancasAbertas.delete(id);
+  else cobrancasAbertas.add(id);
+  renderTabela();
+}
+
+function copiarLinkLinha(id){
+  const input = document.getElementById('cobranca-link-' + id);
+  if(!input) return;
+  input.select();
+  navigator.clipboard?.writeText(input.value).catch(() => {});
+}
+
+async function gerarCobrancaLinha(id){
+  const l = leads.find(x => x.id === id);
+  if(!l) return;
+  cobrancasGerando.add(id);
+  renderTabela();
+  const { data, error } = await sb.functions.invoke('mp-criar-cobranca', { body: { lead_id: id } });
+  cobrancasGerando.delete(id);
+  if(error || !data || data.error){
+    alert('Erro ao gerar cobrança: ' + (data?.error || (error && error.message) || 'erro desconhecido'));
+    renderTabela();
+    return;
+  }
+  l.mp_payment_link = data.link;
+  cobrancasAbertas.add(id);
+  renderTabela();
+}
+
+function abrirNovoLead(){
+  editandoId = null;
+  document.getElementById('modal-titulo').textContent = 'Novo Lead';
+  document.getElementById('l-id').value = '';
+  document.getElementById('l-nome-contato').value = '';
+  document.getElementById('l-nome-restaurante').value = '';
+  document.getElementById('l-telefone').value = '';
+  document.getElementById('l-cidade').value = '';
+  document.getElementById('l-estado').value = '';
+  document.getElementById('l-origem').value = '';
+  document.getElementById('l-status').value = 'novo';
+  document.getElementById('l-plano').value = '';
+  document.getElementById('l-valor').value = '';
+  document.getElementById('l-observacoes').value = '';
+  document.getElementById('btn-excluir-lead').style.display = 'none';
+  cobrancaAtual = { link: null, pagoEm: null };
+  document.getElementById('modal-bg').classList.add('open');
+  atualizarCobrancaBox();
+}
+
+function abrirEditarLead(id){
+  const l = leads.find(x => x.id === id);
+  if(!l) return;
+  editandoId = id;
+  document.getElementById('modal-titulo').textContent = 'Editar Lead';
+  document.getElementById('l-id').value = l.id;
+  document.getElementById('l-nome-contato').value = l.nome_contato || '';
+  document.getElementById('l-nome-restaurante').value = l.nome_restaurante || '';
+  document.getElementById('l-telefone').value = l.telefone_whatsapp || '';
+  document.getElementById('l-cidade').value = l.cidade || '';
+  document.getElementById('l-estado').value = l.estado || '';
+  document.getElementById('l-origem').value = l.origem || '';
+  document.getElementById('l-status').value = l.status || 'novo';
+  document.getElementById('l-plano').value = l.plano_interesse || '';
+  document.getElementById('l-valor').value = l.valor_proposta ?? '';
+  document.getElementById('l-observacoes').value = l.observacoes || '';
+  document.getElementById('btn-excluir-lead').style.display = 'block';
+  cobrancaAtual = { link: l.mp_payment_link || null, pagoEm: l.mp_pago_em || null };
+  document.getElementById('modal-bg').classList.add('open');
+  atualizarCobrancaBox();
+}
+
+function fecharModal(){
+  document.getElementById('modal-bg').classList.remove('open');
+}
+
+function atualizarCobrancaBox(){
+  const box = document.getElementById('cobranca-box');
+  const conteudo = document.getElementById('cobranca-conteudo');
+  if(!editandoId){
+    box.style.display = 'none';
+    conteudo.innerHTML = '';
+    return;
+  }
+  box.style.display = 'block';
+
+  const plano = document.getElementById('l-plano').value.trim();
+  const valor = Number(document.getElementById('l-valor').value);
+  const status = document.getElementById('l-status').value;
+
+  let html = '';
+  if(status === 'fechado' && cobrancaAtual.pagoEm){
+    html += `<div class="cobranca-pago">✓ Pago em ${fmtDataHora(cobrancaAtual.pagoEm)}</div>`;
+  } else if(!plano || !valor || valor <= 0){
+    html += `<div class="cobranca-aviso">Preencha plano de interesse e valor da proposta para gerar a cobrança.</div>`;
+  } else {
+    html += `<button type="button" class="btn-cobranca" id="btn-gerar-cobranca" onclick="gerarCobranca()">${cobrancaAtual.link ? 'Gerar nova cobrança' : 'Gerar cobrança'}</button>`;
+  }
+  conteudo.innerHTML = html;
+
+  if(cobrancaAtual.link){
+    conteudo.insertAdjacentHTML('beforeend', `
+      <div class="cobranca-link-row">
+        <input type="text" readonly value="${cobrancaAtual.link}" id="cobranca-link-input" onclick="this.select()">
+        <button type="button" onclick="copiarLinkCobranca()">Copiar</button>
+        <a href="${cobrancaAtual.link}" target="_blank" rel="noopener">Abrir</a>
+      </div>
+      <div class="cobranca-qr" id="cobranca-qr"></div>
+    `);
+    const qr = qrcode(0, 'M');
+    qr.addData(cobrancaAtual.link);
+    qr.make();
+    document.getElementById('cobranca-qr').innerHTML = qr.createImgTag(4);
+  }
+}
+
+async function gerarCobranca(){
+  if(!editandoId) return;
+  const btn = document.getElementById('btn-gerar-cobranca');
+  if(btn){ btn.disabled = true; btn.textContent = 'Gerando...'; }
+  const { data, error } = await sb.functions.invoke('mp-criar-cobranca', { body: { lead_id: editandoId } });
+  if(error || !data || data.error){
+    alert('Erro ao gerar cobrança: ' + (data?.error || (error && error.message) || 'erro desconhecido'));
+    atualizarCobrancaBox();
+    return;
+  }
+  cobrancaAtual.link = data.link;
+  atualizarCobrancaBox();
+  carregarLeads();
+}
+
+function copiarLinkCobranca(){
+  const input = document.getElementById('cobranca-link-input');
+  if(!input) return;
+  input.select();
+  navigator.clipboard?.writeText(input.value).catch(() => {});
+}
+
+async function salvarLead(){
+  const nomeContato = document.getElementById('l-nome-contato').value.trim();
+  if(!nomeContato){ alert('Preencha o nome do contato.'); return; }
+
+  const payload = {
+    nome_contato: nomeContato,
+    nome_restaurante: document.getElementById('l-nome-restaurante').value.trim() || null,
+    telefone_whatsapp: document.getElementById('l-telefone').value.trim() || null,
+    cidade: document.getElementById('l-cidade').value.trim() || null,
+    estado: document.getElementById('l-estado').value.trim().toUpperCase() || null,
+    origem: document.getElementById('l-origem').value.trim() || null,
+    status: document.getElementById('l-status').value,
+    plano_interesse: document.getElementById('l-plano').value.trim() || null,
+    valor_proposta: document.getElementById('l-valor').value || null,
+    observacoes: document.getElementById('l-observacoes').value.trim() || null,
+  };
+
+  const btn = document.getElementById('btn-salvar-lead');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  let error;
+  if(editandoId){
+    ({ error } = await sb.from('leads').update(payload).eq('id', editandoId));
+  } else {
+    ({ error } = await sb.from('leads').insert(payload));
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Salvar';
+
+  if(error){ alert('Erro ao salvar: ' + error.message); return; }
+  fecharModal();
+  await carregarLeads();
+}
+
+async function excluirLead(){
+  if(!editandoId) return;
+  if(!confirm('Tem certeza que deseja excluir este lead? Essa ação não pode ser desfeita.')) return;
+  const { error } = await sb.from('leads').delete().eq('id', editandoId);
+  if(error){ alert('Erro ao excluir: ' + error.message); return; }
+  fecharModal();
+  await carregarLeads();
+}
+
+const SLUG_POR_RESTAURANTE = {
+  'Pizzaria Premium': 'pizzaria-premium',
+  'The Burger Foundry': 'burger-foundry',
+  'Bistrô Elegante': 'bistro-elegante',
+  'Peso & Sabor': 'peso-e-sabor'
+};
+
+async function redirecionarSeRestaurante(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return false;
+  const { data } = await sb.from('perfis_restaurante').select('restaurante').eq('user_id', user.id).maybeSingle();
+  if(data && data.restaurante && SLUG_POR_RESTAURANTE[data.restaurante]){
+    window.location.href = '/' + SLUG_POR_RESTAURANTE[data.restaurante] + '/';
+    return true;
+  }
+  return false;
+}
+
+async function mostrarApp(){
+  if(await redirecionarSeRestaurante()) return;
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  carregarLeads();
+}
+
+(async function init(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ mostrarApp(); }
+})();
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if(e.key === 'Enter') fazerLogin();
+});
+
+document.getElementById('l-plano').addEventListener('input', atualizarCobrancaBox);
+document.getElementById('l-valor').addEventListener('input', atualizarCobrancaBox);
+document.getElementById('l-status').addEventListener('change', atualizarCobrancaBox);
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(err){
+      console.warn('Falha ao registrar service worker:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
