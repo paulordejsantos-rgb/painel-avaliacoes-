@@ -114,6 +114,7 @@
           <option value="entrada_30">Entrada (30%)</option>
           <option value="saldo_70">Saldo (70%)</option>
           <option value="mensalidade">Mensalidade</option>
+          <option value="cobranca_avulsa">Cobrança avulsa</option>
         </select>
       </div>
 
@@ -147,6 +148,7 @@ const TIPO_LABELS = {
   entrada_30: 'Entrada (30%)',
   saldo_70: 'Saldo (70%)',
   mensalidade: 'Mensalidade',
+  cobranca_avulsa: 'Cobrança avulsa',
 };
 
 let cobrancas = [];
@@ -187,7 +189,7 @@ function fmtDataCurta(iso){
 async function carregarCobrancas(){
   const { data, error } = await sb
     .from('financeiro_cobrancas')
-    .select('*, crm_contatos(nome, empresa)')
+    .select('*, crm_contatos(nome, empresa), leads(nome_contato, nome_restaurante)')
     .order('vencimento', { ascending: true });
 
   if(error){
@@ -210,14 +212,25 @@ async function carregarCobrancas(){
   renderTabela();
 }
 
+function chaveClienteCobranca(c){
+  if(c.contato_id) return c.contato_id;
+  if(c.lead_id) return 'lead:' + c.lead_id;
+  return '';
+}
+
+function nomeClienteCobranca(c){
+  if(c.crm_contatos) return c.crm_contatos.nome;
+  if(c.leads) return c.leads.nome_restaurante || c.leads.nome_contato || '—';
+  return '—';
+}
+
 function popularFiltroClientes(){
   const select = document.getElementById('f-cliente');
   const atual = select.value;
   const nomes = new Map();
   cobrancas.forEach(c => {
-    if(c.crm_contatos){
-      nomes.set(c.contato_id, c.crm_contatos.nome);
-    }
+    const chave = chaveClienteCobranca(c);
+    if(chave) nomes.set(chave, nomeClienteCobranca(c));
   });
   select.innerHTML = '<option value="">Todos os clientes</option>' +
     Array.from(nomes.entries()).map(([id, nome]) => `<option value="${id}">${nome}</option>`).join('');
@@ -258,7 +271,7 @@ function renderTabela(){
   const fTipo = document.getElementById('f-tipo').value;
 
   let lista = cobrancas.slice();
-  if(fCliente) lista = lista.filter(c => c.contato_id === fCliente);
+  if(fCliente) lista = lista.filter(c => chaveClienteCobranca(c) === fCliente);
   if(fStatus) lista = lista.filter(c => c.status === fStatus);
   if(fTipo) lista = lista.filter(c => c.tipo === fTipo);
 
@@ -270,7 +283,7 @@ function renderTabela(){
   }
 
   tbody.innerHTML = lista.map(c => {
-    const nome = c.crm_contatos ? c.crm_contatos.nome : '—';
+    const nome = nomeClienteCobranca(c);
     const empresa = c.crm_contatos && c.crm_contatos.empresa ? c.crm_contatos.empresa : '';
     const acao = c.status === 'pago'
       ? `<button class="acao-btn" onclick="reverterPagamento('${c.id}')">Reverter</button>`
