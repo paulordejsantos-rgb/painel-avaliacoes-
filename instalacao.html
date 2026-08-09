@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalação — A Casa & Designer</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="icon" href="assets/images/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="assets/images/favicon-64.png" sizes="64x64" type="image/png">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Painel A&D">
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:360px;}
+  .login-box h1{font-size:20px;color:var(--gold);margin:0 0 4px;text-align:center;}
+  .login-box p{font-size:13px;color:var(--muted);margin:0 0 24px;text-align:center;}
+  .login-box input{width:100%;padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:14px;}
+  .login-box button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;}
+  .login-err{color:#e35b5b;font-size:13px;margin-top:10px;text-align:center;min-height:16px;}
+
+  .app{display:none;}
+  .app.show{display:block;}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
+  header.top h1{font-size:18px;color:var(--gold);margin:0;}
+  header.top .nav-links{display:flex;gap:14px;font-size:13px;}
+  header.top .nav-links a{color:var(--muted);text-decoration:none;}
+  header.top .nav-links a.active{color:var(--gold);font-weight:700;}
+  header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+
+  .main{max-width:1400px;margin:0 auto;padding:20px;}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .stat-card .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;}
+  .stat-card .val{font-size:20px;font-weight:700;color:var(--gold);}
+
+  .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .filters select{background:var(--card);color:var(--txt);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;}
+
+  .tabela-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:12px 14px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr.lead-row{cursor:pointer;}
+  tr.lead-row:hover{background:rgba(201,168,76,0.05);}
+  .lead-nome{font-weight:700;}
+  .expand-arrow{display:inline-block;width:14px;color:var(--gold);}
+  .status-badge{font-size:11px;padding:4px 10px;border-radius:10px;font-weight:700;white-space:nowrap;}
+  .status-novo{background:rgba(122,176,232,0.15);color:#7ab0e8;}
+  .status-contatado{background:rgba(201,168,76,0.15);color:var(--gold);}
+  .status-proposta_enviada{background:rgba(232,184,74,0.15);color:#e8b84a;}
+  .status-negociacao{background:rgba(180,120,220,0.15);color:#b478dc;}
+  .status-fechado{background:rgba(90,200,120,0.15);color:#5ac878;}
+  .status-perdido{background:rgba(227,91,91,0.15);color:#e35b5b;}
+
+  .prog-wrap{display:flex;flex-direction:column;gap:5px;min-width:160px;}
+  .prog-bar{background:#000;border:1px solid var(--border);border-radius:6px;height:8px;overflow:hidden;}
+  .prog-fill{height:100%;background:var(--gold);border-radius:6px;transition:width .3s;}
+  .prog-fill.completo{background:#5ac878;}
+  .prog-label{font-size:11px;color:var(--muted);}
+
+  .checklist-row td{padding:0;border-bottom:1px solid var(--border);}
+  .checklist-inline{padding:18px 20px;background:rgba(201,168,76,0.04);}
+  .checklist-secoes{display:flex;flex-direction:column;gap:18px;}
+  .checklist-secao h4{font-size:12px;color:var(--gold);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 10px;}
+  .checklist-item{display:flex;align-items:flex-start;gap:10px;padding:6px 0;}
+  .checklist-item input[type=checkbox]{width:18px;height:18px;min-width:18px;margin-top:1px;accent-color:var(--gold);cursor:pointer;}
+  .checklist-item label{font-size:13px;line-height:1.4;cursor:pointer;}
+  .checklist-item.done label{color:#5ac878;}
+
+  .loading{padding:40px;text-align:center;color:var(--muted);}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+</style>
+</head>
+<body>
+
+  <div class="login-wrap" id="login-wrap">
+    <div class="login-box">
+      <h1>Instalação</h1>
+      <p>A Casa & Designer</p>
+      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+      <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+      <button id="login-btn" onclick="fazerLogin()">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="top">
+      <h1>🔧 Instalação</h1>
+      <div class="nav-links">
+        <a href="index.html">Avaliações</a>
+        <a href="crm.html">CRM</a>
+        <a href="financeiro.html">Financeiro</a>
+        <a href="leads.html">Leads</a>
+        <a href="instalacao.html" class="active">Instalação</a>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="fazerLogout()">Sair</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <div class="stats" id="stats"></div>
+
+      <div class="filters">
+        <select id="f-progresso" onchange="renderTabela()">
+          <option value="">Todos os progressos</option>
+          <option value="nao_iniciado">Não iniciado</option>
+          <option value="em_andamento">Em andamento</option>
+          <option value="concluido">Concluído</option>
+        </select>
+      </div>
+
+      <div class="tabela-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome do restaurante</th>
+              <th>Status</th>
+              <th>Progresso da instalação</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-body">
+            <tr><td colspan="3" class="loading">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const STATUS_LABELS = {
+  novo: 'Novo',
+  contatado: 'Contatado',
+  proposta_enviada: 'Proposta Enviada',
+  negociacao: 'Em Negociação',
+  fechado: 'Fechado',
+  perdido: 'Perdido',
+};
+
+const CHECKLIST_SECOES = [
+  {
+    titulo: 'Antes de ir ao cliente',
+    itens: [
+      { id: 'cardapio_publicado', label: 'Cardápio publicado e link testado no ar' },
+      { id: 'qrcodes_gerados', label: 'QR Codes gerados e impressos, um por mesa' },
+      { id: 'contrato_assinado', label: 'Contrato assinado' },
+      { id: 'login_dono_criado', label: 'Login real do dono criado no Painel de Avaliações (Supabase Authentication + perfis_restaurante)' },
+      { id: 'cobranca_recorrente', label: 'Cobrança recorrente configurada' },
+      { id: 'manual_impresso', label: 'Manual de instalação impresso ou pronto para envio' },
+    ]
+  },
+  {
+    titulo: 'No local — instalação',
+    itens: [
+      { id: 'qrcode_posicionado', label: 'QR Code posicionado em cada mesa' },
+      { id: 'cardapio_testado_celular', label: 'Cardápio testado com celular próprio' },
+      { id: 'cardapio_apresentado_equipe', label: 'Cardápio apresentado à equipe' },
+      { id: 'equipe_treinada_acessibilidade', label: 'Equipe treinada nos recursos de acessibilidade' },
+      { id: 'cardapio_funcionando', label: 'Cardápio colocado para funcionar' },
+    ]
+  },
+  {
+    titulo: 'Depois da instalação',
+    itens: [
+      { id: 'whatsapp_suporte_confirmado', label: 'Canal de suporte WhatsApp confirmado com o cliente' },
+      { id: 'data_instalacao_preenchida', label: 'Data de instalação preenchida no manual do cliente' },
+      { id: 'followup_agendado', label: 'Follow-up agendado (7–14 dias)' },
+    ]
+  }
+];
+
+const TOTAL_ITENS = CHECKLIST_SECOES.reduce((s, sec) => s + sec.itens.length, 0);
+
+let leads = [];
+const linhasAbertas = new Set();
+const salvandoItens = new Set();
+
+async function fazerLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if(!email || !senha){ err.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+  if(error){ err.textContent = 'E-mail ou senha inválidos.'; return; }
+  mostrarApp();
+}
+
+async function fazerLogout(){
+  await sb.auth.signOut();
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-wrap').style.display = 'flex';
+}
+
+function progressoDoLead(l){
+  const cl = l.checklist_instalacao || {};
+  const feitos = CHECKLIST_SECOES.reduce((s, sec) => s + sec.itens.filter(it => cl[it.id]).length, 0);
+  return { feitos, total: TOTAL_ITENS };
+}
+
+function statusProgresso(l){
+  const { feitos, total } = progressoDoLead(l);
+  if(feitos === 0) return 'nao_iniciado';
+  if(feitos === total) return 'concluido';
+  return 'em_andamento';
+}
+
+async function carregarLeads(){
+  document.getElementById('tabela-body').innerHTML = '<tr><td colspan="3" class="loading">Carregando...</td></tr>';
+  const { data, error } = await sb.from('leads').select('*').order('nome_restaurante', { ascending: true });
+  if(error){
+    document.getElementById('tabela-body').innerHTML = `<tr><td colspan="3" class="empty">Erro ao carregar: ${error.message}</td></tr>`;
+    return;
+  }
+  leads = data || [];
+  renderStats();
+  renderTabela();
+}
+
+function renderStats(){
+  const total = leads.length;
+  let concluidas = 0, emAndamento = 0, naoIniciadas = 0;
+  leads.forEach(l => {
+    const sp = statusProgresso(l);
+    if(sp === 'concluido') concluidas++;
+    else if(sp === 'em_andamento') emAndamento++;
+    else naoIniciadas++;
+  });
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="lbl">Total de clientes</div><div class="val">${total}</div></div>
+    <div class="stat-card"><div class="lbl">Instalações concluídas</div><div class="val">${concluidas}</div></div>
+    <div class="stat-card"><div class="lbl">Em andamento</div><div class="val">${emAndamento}</div></div>
+    <div class="stat-card"><div class="lbl">Não iniciadas</div><div class="val">${naoIniciadas}</div></div>
+  `;
+}
+
+function renderTabela(){
+  const fProgresso = document.getElementById('f-progresso').value;
+  let lista = leads.slice();
+  if(fProgresso) lista = lista.filter(l => statusProgresso(l) === fProgresso);
+
+  const tbody = document.getElementById('tabela-body');
+
+  if(lista.length === 0){
+    tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhum cliente encontrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = lista.map(l => {
+    const nome = l.nome_restaurante || l.nome_contato || '—';
+    const aberto = linhasAbertas.has(l.id);
+    const { feitos, total } = progressoDoLead(l);
+    const pct = total ? Math.round((feitos / total) * 100) : 0;
+
+    return `
+      <tr class="lead-row" onclick="toggleLinha('${l.id}')">
+        <td><span class="expand-arrow">${aberto ? '▾' : '▸'}</span><span class="lead-nome">${nome}</span></td>
+        <td><span class="status-badge status-${l.status}">${STATUS_LABELS[l.status] || l.status}</span></td>
+        <td>
+          <div class="prog-wrap">
+            <div class="prog-bar"><div class="prog-fill ${feitos === total ? 'completo' : ''}" style="width:${pct}%"></div></div>
+            <div class="prog-label">${feitos}/${total} concluído</div>
+          </div>
+        </td>
+      </tr>${aberto ? checklistPainelHtml(l) : ''}`;
+  }).join('');
+}
+
+function checklistPainelHtml(l){
+  const cl = l.checklist_instalacao || {};
+  const secoesHtml = CHECKLIST_SECOES.map(sec => {
+    const itensHtml = sec.itens.map(it => {
+      const marcado = !!cl[it.id];
+      const desabilitado = salvandoItens.has(l.id + ':' + it.id);
+      return `
+        <div class="checklist-item ${marcado ? 'done' : ''}">
+          <input type="checkbox" id="chk-${l.id}-${it.id}" ${marcado ? 'checked' : ''} ${desabilitado ? 'disabled' : ''}
+            onclick="event.stopPropagation()"
+            onchange="toggleItem('${l.id}', '${it.id}', this.checked)">
+          <label for="chk-${l.id}-${it.id}" onclick="event.stopPropagation()">${it.label}</label>
+        </div>`;
+    }).join('');
+    return `
+      <div class="checklist-secao">
+        <h4>${sec.titulo}</h4>
+        ${itensHtml}
+      </div>`;
+  }).join('');
+
+  return `
+    <tr class="checklist-row">
+      <td colspan="3">
+        <div class="checklist-inline">
+          <div class="checklist-secoes">${secoesHtml}</div>
+        </div>
+      </td>
+    </tr>`;
+}
+
+function toggleLinha(id){
+  if(linhasAbertas.has(id)) linhasAbertas.delete(id);
+  else linhasAbertas.add(id);
+  renderTabela();
+}
+
+async function toggleItem(leadId, itemId, checked){
+  const lead = leads.find(l => l.id === leadId);
+  if(!lead) return;
+  const chave = leadId + ':' + itemId;
+  const anterior = { ...(lead.checklist_instalacao || {}) };
+  const novoChecklist = { ...(lead.checklist_instalacao || {}), [itemId]: checked };
+  lead.checklist_instalacao = novoChecklist;
+  salvandoItens.add(chave);
+  renderStats();
+  renderTabela();
+
+  const { error } = await sb.from('leads').update({ checklist_instalacao: novoChecklist }).eq('id', leadId);
+  salvandoItens.delete(chave);
+
+  if(error){
+    lead.checklist_instalacao = anterior;
+    alert('Erro ao salvar: ' + error.message);
+    renderStats();
+    renderTabela();
+    return;
+  }
+  renderTabela();
+}
+
+const SLUG_POR_RESTAURANTE = {
+  'Pizzaria Premium': 'pizzaria-premium',
+  'The Burger Foundry': 'burger-foundry',
+  'Bistrô Elegante': 'bistro-elegante',
+  'Peso & Sabor': 'peso-e-sabor'
+};
+
+async function redirecionarSeRestaurante(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return false;
+  const { data } = await sb.from('perfis_restaurante').select('restaurante').eq('user_id', user.id).maybeSingle();
+  if(data && data.restaurante && SLUG_POR_RESTAURANTE[data.restaurante]){
+    window.location.href = '/' + SLUG_POR_RESTAURANTE[data.restaurante] + '/';
+    return true;
+  }
+  return false;
+}
+
+async function mostrarApp(){
+  if(await redirecionarSeRestaurante()) return;
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  carregarLeads();
+}
+
+(async function init(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ mostrarApp(); }
+})();
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if(e.key === 'Enter') fazerLogin();
+});
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(err){
+      console.warn('Falha ao registrar service worker:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
