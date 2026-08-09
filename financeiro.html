@@ -303,16 +303,34 @@ function renderTabela(){
 }
 
 async function marcarComoPago(id){
+  const cobranca = cobrancas.find(c => c.id === id);
   const hojeStr = new Date().toISOString().slice(0,10);
   const { error } = await sb.from('financeiro_cobrancas').update({ status: 'pago', pago_em: hojeStr }).eq('id', id);
   if(error){ alert('Erro ao atualizar: ' + error.message); return; }
+
+  if(cobranca && cobranca.lead_id){
+    const { error: leadError } = await sb.from('leads')
+      .update({ status: 'fechado', mp_pago_em: new Date().toISOString() })
+      .eq('id', cobranca.lead_id);
+    if(leadError) console.error('Erro ao atualizar lead vinculado:', leadError.message);
+  }
+
   await carregarCobrancas();
 }
 
 async function reverterPagamento(id){
   if(!confirm('Reverter esta cobrança para pendente?')) return;
+  const cobranca = cobrancas.find(c => c.id === id);
   const { error } = await sb.from('financeiro_cobrancas').update({ status: 'pendente', pago_em: null }).eq('id', id);
   if(error){ alert('Erro ao atualizar: ' + error.message); return; }
+
+  if(cobranca && cobranca.lead_id){
+    const { error: leadError } = await sb.from('leads')
+      .update({ status: 'negociacao', mp_pago_em: null, mp_payment_id: null })
+      .eq('id', cobranca.lead_id);
+    if(leadError) console.error('Erro ao reverter lead vinculado:', leadError.message);
+  }
+
   await carregarCobrancas();
 }
 
