@@ -409,7 +409,7 @@ function renderTabela(){
         <td class="valor-cel">${fmtMoeda(l.valor_proposta)}</td>
         <td>${fmtDataHora(l.data_atualizacao)}</td>
         <td>${followupCel}</td>
-        <td class="acao-cel">${acaoWhatsapp}${acaoCobrancaBtnHtml(l)}</td>
+        <td class="acao-cel">${acaoWhatsapp}${acaoCobrancaBtnHtml(l)}${acaoCopiarLinkBtnHtml(l)}</td>
       </tr>${cobrancaPainelHtml(l)}`;
   }).join('');
 }
@@ -463,6 +463,34 @@ function copiarLinkLinha(id){
   if(!input) return;
   input.select();
   navigator.clipboard?.writeText(input.value).catch(() => {});
+}
+
+const LINKS_DEMO_POR_PLANO = {
+  'Essencial': 'https://peso-e-sabor.vercel.app',
+  'Profissional': 'https://projeto-hamburgueria-gules.vercel.app',
+  'Premium': 'https://severize.vercel.app'
+};
+const LINK_DEMO_CORINGA = 'https://acd-pizzaria-premium.vercel.app';
+
+function linkDemoParaPlano(plano){
+  return LINKS_DEMO_POR_PLANO[plano] || LINK_DEMO_CORINGA;
+}
+
+function acaoCopiarLinkBtnHtml(l){
+  return `<button class="acao-btn" id="copiar-link-btn-${l.id}" onclick="event.stopPropagation(); copiarLinkDemoLinha('${l.id}')">Copiar link</button>`;
+}
+
+function copiarLinkDemoLinha(id){
+  const l = leads.find(x => x.id === id);
+  if(!l) return;
+  const url = linkDemoParaPlano(l.plano_interesse);
+  navigator.clipboard?.writeText(url).then(() => {
+    const btn = document.getElementById('copiar-link-btn-' + id);
+    if(!btn) return;
+    const textoOriginal = btn.textContent;
+    btn.textContent = 'Copiado!';
+    setTimeout(() => { btn.textContent = textoOriginal; }, 2000);
+  }).catch(() => {});
 }
 
 async function gerarCobrancaLinha(id){
