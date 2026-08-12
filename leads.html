@@ -16,6 +16,7 @@
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
@@ -76,11 +77,13 @@
   .acao-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block;}
   .acao-btn:hover{border-color:var(--gold);color:var(--gold);}
   .acao-btn.whatsapp:hover{border-color:#5ac878;color:#5ac878;}
+  .acao-btn.reuniao:hover{border-color:#7ab0e8;color:#7ab0e8;}
   .acao-btn:disabled{opacity:0.4;cursor:not-allowed;}
   .acao-btn:disabled:hover{border-color:var(--border);color:var(--muted);}
   .acao-cel{display:flex;gap:6px;flex-wrap:wrap;}
   .cobranca-row td{padding:0;border-bottom:1px solid var(--border);}
   .cobranca-inline{padding:14px 18px;background:rgba(201,168,76,0.04);}
+  .reuniao-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
   .loading{padding:40px;text-align:center;color:var(--muted);}
   .empty{padding:40px;text-align:center;color:var(--muted);}
 
@@ -107,6 +110,7 @@
   .cobranca-pago{font-size:12px;color:#5ac878;font-weight:700;}
   .cobranca-link-row{display:flex;gap:8px;margin-top:12px;align-items:center;}
   .cobranca-link-row input{flex:1;font-size:12px;}
+  .cobranca-link-row input[type="date"], .cobranca-link-row select{padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:12px;font-family:inherit;}
   .cobranca-link-row button, .cobranca-link-row a{white-space:nowrap;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--txt);font-size:12px;cursor:pointer;text-decoration:none;}
   .cobranca-qr{margin-top:12px;text-align:center;}
   .cobranca-qr img{background:#fff;padding:8px;border-radius:8px;}
@@ -263,6 +267,52 @@ let editandoId = null;
 let cobrancaAtual = { link: null, pagoEm: null };
 const cobrancasAbertas = new Set();
 const cobrancasGerando = new Set();
+const reuniaoAbertas = new Set();
+const reuniaoSalvando = new Set();
+
+// Client ID OAuth do Google Cloud Console (projeto "framesmart7") — não é segredo,
+// é público por natureza; a segurança vem do Client Secret (nunca usado aqui) e
+// das origens autorizadas configuradas no Console.
+const GOOGLE_CLIENT_ID = '788395302089-fh1q13atj0nd9a3t7mato01erei5jloq.apps.googleusercontent.com';
+const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+
+let googleTokenClient = null;
+let googleAccessToken = sessionStorage.getItem('google_access_token') || null;
+let googleTokenExpiresAt = Number(sessionStorage.getItem('google_token_expires_at') || 0);
+
+function initGoogleTokenClient(){
+  if(googleTokenClient || !window.google?.accounts?.oauth2) return;
+  googleTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_CALENDAR_SCOPE,
+    callback: (resp) => {
+      if(resp.error){
+        alert('Não foi possível autorizar o Google Calendar: ' + resp.error);
+        renderTabela();
+        return;
+      }
+      googleAccessToken = resp.access_token;
+      googleTokenExpiresAt = Date.now() + (Number(resp.expires_in) - 60) * 1000;
+      sessionStorage.setItem('google_access_token', googleAccessToken);
+      sessionStorage.setItem('google_token_expires_at', String(googleTokenExpiresAt));
+      renderTabela();
+    },
+  });
+}
+window.addEventListener('load', initGoogleTokenClient);
+
+function temTokenGoogleValido(){
+  return !!googleAccessToken && Date.now() < googleTokenExpiresAt;
+}
+
+function autorizarGoogle(leadId){
+  initGoogleTokenClient();
+  if(!googleTokenClient){
+    alert('Google Identity Services ainda não carregou. Tente novamente em 1 segundo.');
+    return;
+  }
+  googleTokenClient.requestAccessToken({ prompt: temTokenGoogleValido() ? '' : 'consent' });
+}
 
 async function fazerLogin(){
   const email = document.getElementById('login-email').value.trim();
@@ -409,8 +459,8 @@ function renderTabela(){
         <td class="valor-cel">${fmtMoeda(l.valor_proposta)}</td>
         <td>${fmtDataHora(l.data_atualizacao)}</td>
         <td>${followupCel}</td>
-        <td class="acao-cel">${acaoWhatsapp}${acaoCobrancaBtnHtml(l)}${acaoCopiarLinkBtnHtml(l)}</td>
-      </tr>${cobrancaPainelHtml(l)}`;
+        <td class="acao-cel">${acaoWhatsapp}${acaoCobrancaBtnHtml(l)}${acaoReuniaoBtnHtml(l)}${acaoCopiarLinkBtnHtml(l)}</td>
+      </tr>${cobrancaPainelHtml(l)}${reuniaoPainelHtml(l)}`;
   }).join('');
 }
 
@@ -465,6 +515,64 @@ function copiarLinkLinha(id){
   navigator.clipboard?.writeText(input.value).catch(() => {});
 }
 
+async function gerarCobrancaLinha(id){
+  const l = leads.find(x => x.id === id);
+  if(!l) return;
+  cobrancasGerando.add(id);
+  renderTabela();
+  const { data, error } = await sb.functions.invoke('mp-criar-cobranca', { body: { lead_id: id } });
+  cobrancasGerando.delete(id);
+  if(error || !data || data.error){
+    alert('Erro ao gerar cobrança: ' + (data?.error || (error && error.message) || 'erro desconhecido'));
+    renderTabela();
+    return;
+  }
+  l.mp_payment_link = data.link;
+  cobrancasAbertas.add(id);
+  renderTabela();
+}
+
+function proximosDiasUteis(qtde){
+  const dias = [];
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  while(dias.length < qtde){
+    if(d.getDay() !== 0 && d.getDay() !== 6) dias.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return dias;
+}
+
+function fmtDataCurta(d){
+  return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+}
+
+function fmtDataInput(d){
+  return d.toISOString().slice(0, 10);
+}
+
+function horariosComerciais(){
+  const opcoes = [];
+  for(let h = 9; h <= 18; h++){
+    for(const m of [0, 30]){
+      if(h === 18 && m === 30) continue;
+      opcoes.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+    }
+  }
+  return opcoes;
+}
+
+function acaoReuniaoBtnHtml(l){
+  if(reuniaoSalvando.has(l.id)){
+    return `<button class="acao-btn" disabled>Agendando...</button>`;
+  }
+  if(l.calendar_meet_link){
+    const aberto = reuniaoAbertas.has(l.id);
+    return `<button class="acao-btn reuniao" onclick="event.stopPropagation(); toggleReuniaoLinha('${l.id}')">${aberto ? 'Ocultar reunião' : 'Ver reunião'}</button>`;
+  }
+  return `<button class="acao-btn reuniao" onclick="event.stopPropagation(); toggleReuniaoLinha('${l.id}')">Agendar reunião</button>`;
+}
+
 const LINKS_DEMO_POR_PLANO = {
   'Essencial': 'https://peso-e-sabor.vercel.app',
   'Profissional': 'https://projeto-hamburgueria-gules.vercel.app',
@@ -493,21 +601,134 @@ function copiarLinkDemoLinha(id){
   }).catch(() => {});
 }
 
-async function gerarCobrancaLinha(id){
+function toggleReuniaoLinha(id){
+  if(reuniaoAbertas.has(id)) reuniaoAbertas.delete(id);
+  else reuniaoAbertas.add(id);
+  renderTabela();
+}
+
+function copiarMeetLinha(id){
+  const input = document.getElementById('reuniao-link-' + id);
+  if(!input) return;
+  input.select();
+  navigator.clipboard?.writeText(input.value).catch(() => {});
+}
+
+function reuniaoPainelHtml(l){
+  if(!reuniaoAbertas.has(l.id)) return '';
+
+  if(l.calendar_meet_link){
+    return `
+      <tr class="cobranca-row">
+        <td colspan="9">
+          <div class="cobranca-inline">
+            <div class="cobranca-pago">✓ Reunião agendada para ${fmtDataHora(l.calendar_event_start)}</div>
+            <div class="cobranca-link-row">
+              <input type="text" readonly value="${l.calendar_meet_link}" onclick="this.select()" id="reuniao-link-${l.id}">
+              <button type="button" onclick="event.stopPropagation(); copiarMeetLinha('${l.id}')">Copiar</button>
+              <a href="${l.calendar_meet_link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Abrir Meet</a>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+  }
+
+  if(!temTokenGoogleValido()){
+    return `
+      <tr class="cobranca-row">
+        <td colspan="9">
+          <div class="cobranca-inline">
+            <div class="cobranca-aviso">Conecte sua conta Google para criar o evento com link do Meet.</div>
+            <div class="cobranca-link-row">
+              <button type="button" class="btn-cobranca" style="width:auto;" onclick="event.stopPropagation(); autorizarGoogle('${l.id}')">Conectar Google Calendar</button>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+  }
+
+  const dias = proximosDiasUteis(3);
+  const dataDefault = fmtDataInput(dias[0]);
+  const chips = dias.map(d => `<button type="button" class="acao-btn" onclick="event.stopPropagation(); document.getElementById('reuniao-data-${l.id}').value='${fmtDataInput(d)}'">${fmtDataCurta(d)}</button>`).join('');
+  const horas = horariosComerciais().map(h => `<option value="${h}" ${h === '10:00' ? 'selected' : ''}>${h}</option>`).join('');
+
+  return `
+    <tr class="cobranca-row">
+      <td colspan="9">
+        <div class="cobranca-inline">
+          <div class="reuniao-chips">${chips}</div>
+          <div class="cobranca-link-row">
+            <input type="date" id="reuniao-data-${l.id}" value="${dataDefault}" min="${dataDefault}" onclick="event.stopPropagation()">
+            <select id="reuniao-hora-${l.id}" onclick="event.stopPropagation()">${horas}</select>
+          </div>
+          <textarea id="reuniao-obs-${l.id}" placeholder="Observação (opcional)" onclick="event.stopPropagation()" style="width:100%;margin-top:8px;min-height:50px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:13px;font-family:inherit;"></textarea>
+          <div class="cobranca-link-row">
+            <button type="button" class="btn-cobranca" style="width:auto;" onclick="event.stopPropagation(); confirmarReuniao('${l.id}')">Confirmar agendamento</button>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+}
+
+async function confirmarReuniao(id){
   const l = leads.find(x => x.id === id);
   if(!l) return;
-  cobrancasGerando.add(id);
+  const data = document.getElementById(`reuniao-data-${id}`).value;
+  const hora = document.getElementById(`reuniao-hora-${id}`).value;
+  const obs = document.getElementById(`reuniao-obs-${id}`).value.trim();
+  if(!data || !hora){ alert('Escolha data e horário.'); return; }
+
+  reuniaoSalvando.add(id);
   renderTabela();
-  const { data, error } = await sb.functions.invoke('mp-criar-cobranca', { body: { lead_id: id } });
-  cobrancasGerando.delete(id);
-  if(error || !data || data.error){
-    alert('Erro ao gerar cobrança: ' + (data?.error || (error && error.message) || 'erro desconhecido'));
+
+  const [hh, mm] = hora.split(':').map(Number);
+  const startISO = `${data}T${hora}:00`;
+  const fimTotal = hh * 60 + mm + 30;
+  const horaFim = `${String(Math.floor(fimTotal / 60) % 24).padStart(2,'0')}:${String(fimTotal % 60).padStart(2,'0')}`;
+  const dataFim = fimTotal >= 24 * 60 ? fmtDataInput(new Date(new Date(data).getTime() + 86400000)) : data;
+  const endISO = `${dataFim}T${horaFim}:00`;
+
+  const titulo = `Reunião — ${l.nome_restaurante || l.nome_contato || 'Lead'}`;
+  const descricaoPartes = [];
+  if(l.telefone_whatsapp) descricaoPartes.push(`Telefone/WhatsApp: ${l.telefone_whatsapp}`);
+  if(obs) descricaoPartes.push(`Observação: ${obs}`);
+
+  const body = {
+    summary: titulo,
+    description: descricaoPartes.join('\n'),
+    start: { dateTime: startISO, timeZone: 'America/Sao_Paulo' },
+    end: { dateTime: endISO, timeZone: 'America/Sao_Paulo' },
+    conferenceData: { createRequest: { requestId: crypto.randomUUID(), conferenceSolutionKey: { type: 'hangoutsMeet' } } },
+  };
+
+  try{
+    const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${googleAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const evento = await resp.json();
+    if(!resp.ok) throw new Error(evento.error?.message || 'erro desconhecido');
+
+    const meetLink = evento.hangoutLink
+      || evento.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri
+      || null;
+
+    l.calendar_event_id = evento.id;
+    l.calendar_meet_link = meetLink;
+    l.calendar_event_start = evento.start.dateTime;
+
+    await sb.from('leads').update({
+      calendar_event_id: evento.id,
+      calendar_meet_link: meetLink,
+      calendar_event_start: evento.start.dateTime,
+    }).eq('id', id);
+  } catch(e){
+    alert('Erro ao agendar reunião: ' + e.message);
+  } finally {
+    reuniaoSalvando.delete(id);
     renderTabela();
-    return;
   }
-  l.mp_payment_link = data.link;
-  cobrancasAbertas.add(id);
-  renderTabela();
 }
 
 function abrirNovoLead(){
