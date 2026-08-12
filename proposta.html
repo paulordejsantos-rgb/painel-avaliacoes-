@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposta comercial</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:460px;}
+  .box.larga{max-width:720px;}
+  .box h1{font-size:20px;color:var(--gold);margin:0 0 4px;text-align:center;}
+  .box p.sub{font-size:13px;color:var(--muted);margin:0 0 28px;text-align:center;}
+
+  .campo{margin-bottom:18px;}
+  .campo label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;}
+  .campo input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:15px;font-family:inherit;}
+
+  button.principal{width:100%;padding:13px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;}
+  button.principal:disabled{opacity:0.5;cursor:not-allowed;}
+  button.secundario{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--txt);font-weight:600;font-size:13px;cursor:pointer;margin-top:10px;}
+
+  .msg{font-size:13px;margin-top:14px;text-align:center;min-height:16px;}
+  .msg.erro{color:#e35b5b;}
+  .msg.ok{color:#5ac878;}
+
+  .planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:24px 0;}
+  .plano-card{border:1px solid var(--border);border-radius:14px;padding:18px 16px;text-align:center;}
+  .plano-card.destaque{border-color:var(--gold);background:rgba(201,168,76,0.07);}
+  .plano-card .tag{display:none;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--gold);font-weight:700;margin-bottom:8px;}
+  .plano-card.destaque .tag{display:block;}
+  .plano-card h3{margin:0 0 12px;font-size:16px;color:var(--txt);}
+  .plano-card .entrada{font-size:22px;font-weight:700;color:var(--gold);}
+  .plano-card .mensal{font-size:12px;color:var(--muted);margin-top:4px;}
+
+  .pagamento{text-align:center;}
+  .pagamento .icone{font-size:36px;margin-bottom:10px;}
+  .pagamento h2{color:var(--gold);font-size:18px;margin:0 0 8px;}
+  .pagamento p{color:var(--muted);font-size:13px;margin:0 0 20px;}
+  .pagamento .qr img{background:#fff;padding:10px;border-radius:10px;margin-bottom:18px;}
+  .link-row{display:flex;gap:8px;margin-bottom:10px;}
+  .link-row input{flex:1;font-size:12px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:#000;color:var(--txt);}
+  .link-row button{white-space:nowrap;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--txt);font-size:12px;cursor:pointer;}
+  .link-row a{white-space:nowrap;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--txt);font-size:12px;cursor:pointer;text-decoration:none;}
+
+  .oculto{display:none !important;}
+</style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div class="box" id="box-gate">
+      <h1>Proposta comercial</h1>
+      <p class="sub" id="gate-sub">Digite seu telefone para confirmar e ver sua proposta.</p>
+
+      <form id="form-gate" onsubmit="event.preventDefault(); confirmarTelefone();">
+        <div class="campo">
+          <label>Telefone / WhatsApp</label>
+          <input type="tel" id="telefone" placeholder="(11) 98765-4321" autocomplete="tel">
+        </div>
+        <button type="submit" class="principal" id="btn-confirmar">Confirmar</button>
+      </form>
+      <div class="msg" id="msg-gate"></div>
+    </div>
+
+    <div class="box larga oculto" id="box-proposta">
+      <h1 id="proposta-titulo">Sua proposta</h1>
+      <p class="sub" id="proposta-sub"></p>
+
+      <div class="planos" id="planos"></div>
+
+      <button type="button" class="principal" id="btn-aceitar" onclick="aceitarProposta()">Aceitar proposta</button>
+      <div class="msg" id="msg-proposta"></div>
+    </div>
+
+    <div class="box oculto" id="box-pagamento">
+      <div class="pagamento">
+        <div class="icone" id="pagamento-icone">💳</div>
+        <h2 id="pagamento-titulo">Proposta aceita!</h2>
+        <p id="pagamento-texto">Escaneie o QR Code ou use o link abaixo para pagar.</p>
+        <div class="qr" id="pagamento-qr"></div>
+        <div class="link-row">
+          <input type="text" readonly id="pagamento-link" onclick="this.select()">
+          <button type="button" onclick="copiarLinkPagamento()">Copiar</button>
+          <a id="pagamento-abrir" href="#" target="_blank" rel="noopener">Abrir</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+
+const PLANOS = [
+  { chave: 'Essencial', nome: 'Essencial', entrada: 1500, mensal: 250 },
+  { chave: 'Profissional', nome: 'Profissional', entrada: 2000, mensal: 350 },
+  { chave: 'Premium', nome: 'Premium', entrada: 3000, mensal: 500 },
+];
+
+let telefoneConfirmado = null;
+
+function leadIdAtual(){
+  return new URLSearchParams(window.location.search).get('lead');
+}
+
+function fmtMoeda(v){
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function mostrarMsg(elId, texto, tipo){
+  const el = document.getElementById(elId);
+  el.textContent = texto;
+  el.className = 'msg ' + (tipo || '');
+}
+
+async function chamarPropostaPublica(action, telefone){
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/proposta-publica`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ action, lead_id: leadIdAtual(), telefone }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  return { ok: resp.ok, data };
+}
+
+async function confirmarTelefone(){
+  const telefone = document.getElementById('telefone').value.trim();
+  if(!telefone){
+    mostrarMsg('msg-gate', 'Digite seu telefone.', 'erro');
+    return;
+  }
+
+  const btn = document.getElementById('btn-confirmar');
+  btn.disabled = true;
+  btn.textContent = 'Verificando...';
+  mostrarMsg('msg-gate', '', '');
+
+  const { ok, data } = await chamarPropostaPublica('verificar', telefone);
+
+  btn.disabled = false;
+  btn.textContent = 'Confirmar';
+
+  if(!ok){
+    mostrarMsg('msg-gate', data.error || 'Telefone não confere. Verifique e tente novamente.', 'erro');
+    return;
+  }
+
+  telefoneConfirmado = telefone;
+  document.getElementById('box-gate').classList.add('oculto');
+  mostrarProposta(data);
+}
+
+function planoCorresponde(planoInteresse, chave){
+  if(!planoInteresse) return false;
+  return planoInteresse.toLowerCase().includes(chave.toLowerCase());
+}
+
+function renderPlanos(planoInteresse){
+  const html = PLANOS.map(p => {
+    const destaque = planoCorresponde(planoInteresse, p.chave);
+    return `
+      <div class="plano-card ${destaque ? 'destaque' : ''}">
+        <div class="tag">Seu plano</div>
+        <h3>${p.nome}</h3>
+        <div class="entrada">${fmtMoeda(p.entrada)}</div>
+        <div class="mensal">+ ${fmtMoeda(p.mensal)}/mês</div>
+      </div>`;
+  }).join('');
+  document.getElementById('planos').innerHTML = html;
+}
+
+function mostrarProposta(data){
+  if(data.mp_pago_em){
+    mostrarPagamento(data.mp_payment_link, true);
+    return;
+  }
+  if(data.mp_payment_link){
+    mostrarPagamento(data.mp_payment_link, false);
+    return;
+  }
+
+  document.getElementById('proposta-sub').textContent = data.nome_restaurante
+    ? `Proposta para ${data.nome_restaurante}`
+    : 'Confira os valores da sua proposta.';
+  renderPlanos(data.plano_interesse);
+  document.getElementById('box-proposta').classList.remove('oculto');
+}
+
+async function aceitarProposta(){
+  const btn = document.getElementById('btn-aceitar');
+  btn.disabled = true;
+  btn.textContent = 'Gerando cobrança...';
+  mostrarMsg('msg-proposta', '', '');
+
+  const { ok, data } = await chamarPropostaPublica('aceitar', telefoneConfirmado);
+
+  btn.disabled = false;
+  btn.textContent = 'Aceitar proposta';
+
+  if(!ok){
+    mostrarMsg('msg-proposta', data.error || 'Erro ao gerar cobrança. Tente novamente em instantes.', 'erro');
+    return;
+  }
+
+  document.getElementById('box-proposta').classList.add('oculto');
+  mostrarPagamento(data.link, !!data.ja_pago);
+}
+
+function mostrarPagamento(link, jaPago){
+  if(jaPago){
+    document.getElementById('pagamento-icone').textContent = '✅';
+    document.getElementById('pagamento-titulo').textContent = 'Pagamento confirmado!';
+    document.getElementById('pagamento-texto').textContent = 'Sua proposta já foi paga. Obrigado!';
+  }
+
+  document.getElementById('pagamento-link').value = link;
+  document.getElementById('pagamento-abrir').href = link;
+
+  const qr = qrcode(0, 'M');
+  qr.addData(link);
+  qr.make();
+  document.getElementById('pagamento-qr').innerHTML = qr.createImgTag(5);
+
+  document.getElementById('box-pagamento').classList.remove('oculto');
+}
+
+function copiarLinkPagamento(){
+  const input = document.getElementById('pagamento-link');
+  input.select();
+  navigator.clipboard?.writeText(input.value).catch(() => {});
+}
+
+(function init(){
+  if(!leadIdAtual()){
+    document.getElementById('gate-sub').textContent = 'Link inválido — proposta não encontrada.';
+    document.getElementById('form-gate').classList.add('oculto');
+  }
+})();
+</script>
+</body>
+</html>

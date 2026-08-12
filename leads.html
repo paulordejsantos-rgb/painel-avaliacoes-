@@ -69,6 +69,7 @@
   .status-contatado{background:rgba(201,168,76,0.15);color:var(--gold);}
   .status-proposta_enviada{background:rgba(232,184,74,0.15);color:#e8b84a;}
   .status-negociacao{background:rgba(180,120,220,0.15);color:#b478dc;}
+  .status-aguardando_pagamento{background:rgba(232,140,74,0.15);color:#e88c4a;}
   .status-fechado{background:rgba(90,200,120,0.15);color:#5ac878;}
   .status-perdido{background:rgba(227,91,91,0.15);color:#e35b5b;}
   .followup-normal{font-size:11px;color:var(--muted);}
@@ -155,6 +156,7 @@
           <option value="contatado">Contatado</option>
           <option value="proposta_enviada">Proposta Enviada</option>
           <option value="negociacao">Em Negociação</option>
+          <option value="aguardando_pagamento">Aguardando Pagamento</option>
           <option value="fechado">Fechado</option>
           <option value="perdido">Perdido</option>
         </select>
@@ -222,6 +224,7 @@
         <option value="contatado">Contatado</option>
         <option value="proposta_enviada">Proposta Enviada</option>
         <option value="negociacao">Em Negociação</option>
+        <option value="aguardando_pagamento">Aguardando Pagamento</option>
         <option value="fechado">Fechado</option>
         <option value="perdido">Perdido</option>
       </select>
@@ -258,6 +261,7 @@ const STATUS_LABELS = {
   contatado: 'Contatado',
   proposta_enviada: 'Proposta Enviada',
   negociacao: 'Em Negociação',
+  aguardando_pagamento: 'Aguardando Pagamento',
   fechado: 'Fechado',
   perdido: 'Perdido',
 };
@@ -459,7 +463,7 @@ function renderTabela(){
         <td class="valor-cel">${fmtMoeda(l.valor_proposta)}</td>
         <td>${fmtDataHora(l.data_atualizacao)}</td>
         <td>${followupCel}</td>
-        <td class="acao-cel">${acaoWhatsapp}${acaoCobrancaBtnHtml(l)}${acaoReuniaoBtnHtml(l)}${acaoCopiarLinkBtnHtml(l)}</td>
+        <td class="acao-cel">${acaoWhatsapp}${acaoCobrancaBtnHtml(l)}${acaoReuniaoBtnHtml(l)}${acaoCopiarLinkBtnHtml(l)}${acaoEnviarPropostaBtnHtml(l)}</td>
       </tr>${cobrancaPainelHtml(l)}${reuniaoPainelHtml(l)}`;
   }).join('');
 }
@@ -594,6 +598,21 @@ function copiarLinkDemoLinha(id){
   const url = linkDemoParaPlano(l.plano_interesse);
   navigator.clipboard?.writeText(url).then(() => {
     const btn = document.getElementById('copiar-link-btn-' + id);
+    if(!btn) return;
+    const textoOriginal = btn.textContent;
+    btn.textContent = 'Copiado!';
+    setTimeout(() => { btn.textContent = textoOriginal; }, 2000);
+  }).catch(() => {});
+}
+
+function acaoEnviarPropostaBtnHtml(l){
+  return `<button class="acao-btn" id="enviar-proposta-btn-${l.id}" onclick="event.stopPropagation(); copiarLinkPropostaLinha('${l.id}')">Enviar proposta</button>`;
+}
+
+function copiarLinkPropostaLinha(id){
+  const url = `${window.location.origin}/proposta.html?lead=${id}`;
+  navigator.clipboard?.writeText(url).then(() => {
+    const btn = document.getElementById('enviar-proposta-btn-' + id);
     if(!btn) return;
     const textoOriginal = btn.textContent;
     btn.textContent = 'Copiado!';
