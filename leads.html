@@ -33,6 +33,8 @@
   .login-box button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;}
   .login-err{color:#e35b5b;font-size:13px;margin-top:10px;text-align:center;min-height:16px;}
 
+  #gate-content{display:none;}
+
   .app{display:none;}
   .app.show{display:block;}
   header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
@@ -119,6 +121,18 @@
 </head>
 <body>
 
+  <div class="login-wrap" id="senha-gate">
+    <div class="login-box">
+      <h1>Acesso restrito</h1>
+      <p>Leads — A Casa & Designer</p>
+      <input type="password" id="gate-senha" placeholder="Senha de acesso" autocomplete="off">
+      <button id="gate-btn" onclick="verificarSenhaGate()">Entrar</button>
+      <div class="login-err" id="gate-err"></div>
+    </div>
+  </div>
+
+  <div id="gate-content">
+
   <div class="login-wrap" id="login-wrap">
     <div class="login-box">
       <h1>Leads</h1>
@@ -139,6 +153,7 @@
         <a href="financeiro.html">Financeiro</a>
         <a href="leads.html" class="active">Leads</a>
         <a href="instalacao.html">Instalação</a>
+        <a href="central.html">Central</a>
       </div>
       <div style="display:flex;gap:10px;">
         <button class="btn-novo" onclick="abrirNovoLead()">+ Novo Lead</button>
@@ -250,6 +265,50 @@
       <button class="btn-excluir" id="btn-excluir-lead" style="display:none;" onclick="excluirLead()">Excluir lead</button>
     </div>
   </div>
+
+  </div><!-- /gate-content -->
+
+<script>
+const GATE_SENHA_HASH = '18413b37fa3f9d0a87dcf65cbda8d456e970435e71a214aed64de92a44450204';
+const GATE_SESSION_KEY = 'leads_gate_ok';
+
+async function sha256Hex(texto){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verificarSenhaGate(){
+  const input = document.getElementById('gate-senha');
+  const btn = document.getElementById('gate-btn');
+  const err = document.getElementById('gate-err');
+  const senha = input.value;
+  err.textContent = '';
+  if(!senha){ err.textContent = 'Digite a senha.'; return; }
+  btn.disabled = true;
+  const hash = await sha256Hex(senha);
+  btn.disabled = false;
+  if(hash !== GATE_SENHA_HASH){
+    err.textContent = 'Senha incorreta.';
+    input.value = '';
+    return;
+  }
+  sessionStorage.setItem(GATE_SESSION_KEY, '1');
+  abrirGateContent();
+}
+
+function abrirGateContent(){
+  document.getElementById('senha-gate').style.display = 'none';
+  document.getElementById('gate-content').style.display = 'block';
+}
+
+document.getElementById('gate-senha').addEventListener('keydown', e => {
+  if(e.key === 'Enter') verificarSenhaGate();
+});
+
+if(sessionStorage.getItem(GATE_SESSION_KEY) === '1'){
+  abrirGateContent();
+}
+</script>
 
 <script>
 const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
@@ -463,7 +522,7 @@ function renderTabela(){
         <td class="valor-cel">${fmtMoeda(l.valor_proposta)}</td>
         <td>${fmtDataHora(l.data_atualizacao)}</td>
         <td>${followupCel}</td>
-        <td class="acao-cel">${acaoWhatsapp}${acaoCobrancaBtnHtml(l)}${acaoReuniaoBtnHtml(l)}${acaoCopiarLinkBtnHtml(l)}${acaoEnviarPropostaBtnHtml(l)}</td>
+        <td class="acao-cel">${acaoWhatsapp}${acaoCobrancaBtnHtml(l)}${acaoReuniaoBtnHtml(l)}${acaoCopiarLinkBtnHtml(l)}${acaoEnviarPropostaBtnHtml(l)}${acaoDuplicarBtnHtml(l)}</td>
       </tr>${cobrancaPainelHtml(l)}${reuniaoPainelHtml(l)}`;
   }).join('');
 }
@@ -618,6 +677,32 @@ function copiarLinkPropostaLinha(id){
     btn.textContent = 'Copiado!';
     setTimeout(() => { btn.textContent = textoOriginal; }, 2000);
   }).catch(() => {});
+}
+
+function acaoDuplicarBtnHtml(l){
+  return `<button class="acao-btn" onclick="event.stopPropagation(); duplicarLeadLinha('${l.id}')">Duplicar lead</button>`;
+}
+
+function duplicarLeadLinha(id){
+  const l = leads.find(x => x.id === id);
+  if(!l) return;
+  editandoId = null;
+  document.getElementById('modal-titulo').textContent = 'Novo Lead';
+  document.getElementById('l-id').value = '';
+  document.getElementById('l-nome-contato').value = l.nome_contato || '';
+  document.getElementById('l-nome-restaurante').value = l.nome_restaurante || '';
+  document.getElementById('l-telefone').value = l.telefone_whatsapp || '';
+  document.getElementById('l-cidade').value = l.cidade || '';
+  document.getElementById('l-estado').value = l.estado || '';
+  document.getElementById('l-origem').value = l.origem || '';
+  document.getElementById('l-status').value = 'novo';
+  document.getElementById('l-plano').value = l.plano_interesse || '';
+  document.getElementById('l-valor').value = '';
+  document.getElementById('l-observacoes').value = '';
+  document.getElementById('btn-excluir-lead').style.display = 'none';
+  cobrancaAtual = { link: null, pagoEm: null };
+  document.getElementById('modal-bg').classList.add('open');
+  atualizarCobrancaBox();
 }
 
 function toggleReuniaoLinha(id){
