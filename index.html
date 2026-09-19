@@ -36,44 +36,118 @@
   /* ---- DASHBOARD ---- */
   .app{display:none;}
   .app.show{display:block;}
-  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
   header.top h1{font-size:18px;color:var(--gold);margin:0;}
+  header.top .nav-links{display:flex;gap:14px;font-size:13px;flex-wrap:wrap;}
+  header.top .nav-links a{color:var(--muted);text-decoration:none;}
+  header.top .nav-links a:hover{color:var(--txt);}
+  header.top .nav-links a.active{color:var(--gold);font-weight:700;}
   header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
 
-  .main{max-width:1100px;margin:0 auto;padding:20px;}
+  .main{max-width:1200px;margin:0 auto;padding:28px 20px 60px;}
+  .main-intro{margin:0 0 22px;}
+  .main-intro h2{font-size:22px;margin:0 0 6px;color:var(--txt);}
+  .main-intro p{font-size:13px;color:var(--muted);margin:0;}
 
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
-  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
-  .stat-card .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;}
-  .stat-card .val{font-size:22px;font-weight:700;color:var(--gold);}
+  /* KPIs */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px;}
+  .kpi{position:relative;overflow:hidden;background:linear-gradient(155deg,#1d1a12 0%,var(--card) 60%);border:1px solid var(--border);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s ease;}
+  .kpi:hover{border-color:rgba(201,168,76,0.4);}
+  .kpi::after{content:"";position:absolute;right:-40px;top:-40px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,0.16),transparent 70%);pointer-events:none;}
+  .kpi-head{display:flex;align-items:center;gap:10px;}
+  .kpi-icon{width:34px;height:34px;border-radius:10px;background:rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;}
+  .kpi .val{font-size:36px;font-weight:700;color:var(--gold);line-height:1.1;letter-spacing:-0.01em;font-variant-numeric:tabular-nums;}
+  .kpi .val small{font-size:14px;font-weight:500;color:var(--muted);margin-left:4px;}
+  .kpi .sub{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;min-height:18px;}
 
-  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
-  .filters select{background:var(--card);color:var(--txt);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;}
+  .stars{white-space:nowrap;letter-spacing:1px;color:var(--gold);}
+  .kpi .stars{font-size:16px;}
+  .stars .off{color:#3a3a3a;}
 
-  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  /* Painel por restaurante */
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:20px;}
+  .panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .panel-head h3{font-size:15px;margin:0;color:var(--txt);}
+  .panel-head span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;}
+  .rest-list{display:flex;flex-direction:column;}
+  .rest-row{display:grid;grid-template-columns:minmax(150px,1.1fr) 2fr;gap:8px 20px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);}
+  .rest-row:last-child{border-bottom:none;padding-bottom:0;}
+  .rest-row:first-child{padding-top:0;}
+  .rest-name{font-size:14px;font-weight:600;color:var(--txt);}
+  .rest-count{font-size:11px;color:var(--muted);margin-top:2px;}
+  .bars{display:flex;flex-direction:column;gap:7px;}
+  .bar-line{display:grid;grid-template-columns:96px 1fr 34px;align-items:center;gap:10px;font-size:11px;color:var(--muted);}
+  .bar-track{height:8px;border-radius:99px;background:#232323;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#8f7433,var(--gold));transition:width .6s ease;}
+  .bar-fill.estab{background:linear-gradient(90deg,#3f6ea3,#7ab0e8);}
+  .bar-val{text-align:right;color:var(--txt);font-weight:600;font-variant-numeric:tabular-nums;}
+
+  /* Filtros */
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+  .filters select{background:var(--card);color:var(--txt);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;cursor:pointer;transition:border-color .15s ease;}
+  .filters select:hover,.filters select:focus{border-color:var(--gold);outline:none;}
+  .filters .count{margin-left:auto;font-size:12px;color:var(--muted);}
+
+  /* Tabela */
+  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
-  th{text-align:left;padding:12px 14px;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--border);}
-  td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top;}
+  th{text-align:left;padding:12px 16px;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);background:#131313;}
+  td{padding:13px 16px;border-bottom:1px solid var(--border);vertical-align:top;}
+  tbody tr.item{transition:background .15s ease;}
+  tbody tr.item:hover{background:#1b1b1b;}
   tr:last-child td{border-bottom:none;}
-  .tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+  tr.grp td{background:#1a1710;padding:11px 16px;border-bottom:1px solid var(--border);}
+  .grp-in{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .grp-name{font-weight:700;color:var(--gold);font-size:13px;}
+  .grp-meta{font-size:11px;color:var(--muted);}
+  .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
   .tag-digital{background:rgba(201,168,76,0.15);color:var(--gold);}
   .tag-estab{background:rgba(90,150,220,0.15);color:#7ab0e8;}
-  .stars{color:var(--gold);white-space:nowrap;}
-  .sugestao{color:var(--txt);max-width:280px;}
+  .nota-line{display:flex;align-items:center;gap:8px;line-height:1.7;}
+  .nota-line .k{font-size:11px;color:var(--muted);min-width:64px;}
+  .sugestao{color:var(--txt);max-width:320px;line-height:1.5;}
   .muted{color:var(--muted);}
-  .empty{padding:40px;text-align:center;color:var(--muted);}
-  .loading{padding:40px;text-align:center;color:var(--muted);}
+  .empty,.loading{padding:48px 20px;text-align:center;color:var(--muted);}
+  .empty .big{font-size:28px;margin-bottom:8px;}
 
-  .section-title{font-size:15px;color:var(--gold);margin:32px 0 12px;font-weight:700;}
-  .sugestoes-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;}
-  .sugestao-row{border-bottom:1px solid var(--border);padding-bottom:14px;}
-  .sugestao-row:last-child{border-bottom:none;padding-bottom:0;}
-  .sugestao-row .nome{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:8px;}
-  .sugestao-row textarea{width:100%;min-height:56px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;margin-bottom:8px;}
-  .sugestao-row-actions{display:flex;align-items:center;gap:10px;}
-  .sugestao-row button{padding:8px 16px;border-radius:8px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:12px;cursor:pointer;}
+  /* Sugestão do dia */
+  .section-head{margin:36px 0 14px;}
+  .section-head h3{font-size:18px;margin:0 0 4px;color:var(--txt);}
+  .section-head p{font-size:13px;color:var(--muted);margin:0;}
+  .sugestoes-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:16px;}
+  .sugestao-row{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;transition:border-color .15s ease;}
+  .sugestao-row:hover,.sugestao-row:focus-within{border-color:rgba(201,168,76,0.4);}
+  .sugestao-row .nome{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:700;color:var(--txt);}
+  .sugestao-row .nome .ico{width:36px;height:36px;border-radius:10px;background:rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+  .sugestao-row textarea{width:100%;min-height:84px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5;}
+  .sugestao-row textarea:focus{outline:none;border-color:var(--gold);}
+  .sugestao-row-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .sugestao-row button{padding:9px 20px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:12px;cursor:pointer;transition:filter .15s ease;}
+  .sugestao-row button:hover{filter:brightness(1.1);}
   .sugestao-row button:disabled{opacity:0.5;cursor:not-allowed;}
   .sugestao-status{font-size:11px;color:var(--muted);}
+
+  @media (prefers-reduced-motion:no-preference){
+    .kpi,.panel,.table-wrap,.sugestao-row{animation:rise .45s ease both;}
+    .kpi:nth-child(2){animation-delay:.05s;}
+    .kpi:nth-child(3){animation-delay:.1s;}
+    @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  }
+
+  @media (max-width:760px){
+    header.top{position:static;}
+    .rest-row{grid-template-columns:1fr;}
+    .filters .count{margin-left:0;width:100%;}
+    table,thead,tbody,tr,td{display:block;width:100%;}
+    thead{display:none;}
+    tr.item{padding:14px 16px;border-bottom:1px solid var(--border);}
+    tr.item td{padding:4px 0;border:none;}
+    tr.item td::before{content:attr(data-label);display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;}
+    tr.grp td{display:block;}
+    .sugestao{max-width:none;}
+    .sugestoes-wrap{grid-template-columns:1fr;}
+  }
 </style>
 </head>
 <body>
@@ -92,40 +166,47 @@
   <div class="app" id="app">
     <header class="top">
       <h1>⭐ Painel de Avaliações</h1>
-      <div style="display:flex;gap:14px;font-size:13px;">
-        <a href="index.html" style="color:var(--gold);font-weight:700;text-decoration:none;">Avaliações</a>
-        <a href="crm.html" style="color:var(--muted);text-decoration:none;">CRM</a>
-        <a href="financeiro.html" style="color:var(--muted);text-decoration:none;">Financeiro</a>
-        <a href="leads.html" style="color:var(--muted);text-decoration:none;">Leads</a>
-        <a href="instalacao.html" style="color:var(--muted);text-decoration:none;">Instalação</a>
-        <a href="central.html" style="color:var(--muted);text-decoration:none;">Central</a>
+      <div class="nav-links">
+        <a href="index.html" class="active">Avaliações</a>
+        <a href="crm.html">CRM</a>
+        <a href="financeiro.html">Financeiro</a>
+        <a href="leads.html">Leads</a>
+        <a href="instalacao.html">Instalação</a>
+        <a href="central.html">Central</a>
       </div>
       <button onclick="fazerLogout()">Sair</button>
     </header>
 
     <div class="main">
+      <div class="main-intro">
+        <h2>Avaliações dos clientes</h2>
+        <p>O que os clientes estão dizendo sobre cada restaurante — notas, sugestões e desempenho em um só lugar.</p>
+      </div>
+
       <div class="stats" id="stats"></div>
 
+      <div class="panel" id="panel-restaurantes"></div>
+
       <div class="filters">
-        <select id="filtro-restaurante" onchange="aplicarFiltros()">
+        <select id="filtro-restaurante" onchange="aplicarFiltros()" aria-label="Filtrar por restaurante">
           <option value="">Todos os restaurantes</option>
-          <option value="Pizzaria Premium">Pizzaria Premium</option>
-          <option value="The Burger Foundry">The Burger Foundry</option>
-          <option value="Bistrô Elegante">Bistrô Elegante</option>
-          <option value="Peso & Sabor">Peso & Sabor</option>
         </select>
-        <select id="filtro-tipo" onchange="aplicarFiltros()">
+        <select id="filtro-tipo" onchange="aplicarFiltros()" aria-label="Filtrar por tipo">
           <option value="">Todos os tipos</option>
           <option value="cardapio_digital">Cardápio digital</option>
           <option value="estabelecimento">Estabelecimento</option>
         </select>
+        <span class="count" id="filtro-count"></span>
       </div>
 
       <div class="table-wrap">
         <div id="tabela-container" class="loading">Carregando...</div>
       </div>
 
-      <div class="section-title">🍽️ Sugestão do Dia (do garçom)</div>
+      <div class="section-head">
+        <h3>🍽️ Sugestão do Dia</h3>
+        <p>Texto que o garçom digital mostra aos clientes de cada restaurante.</p>
+      </div>
       <div class="sugestoes-wrap" id="sugestoes-container">Carregando...</div>
     </div>
   </div>
@@ -136,7 +217,15 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Fonte única da lista de restaurantes — sempre em ordem alfabética (pt-BR).
+const RESTAURANTES = ['Pizzaria Premium', 'The Burger Foundry', 'Bistrô Elegante', 'Peso & Sabor']
+  .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
 let todasAvaliacoes = [];
+
+function esc(t){
+  return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 async function fazerLogin(){
   const email = document.getElementById('login-email').value.trim();
@@ -167,7 +256,7 @@ async function fazerLogout(){
 
 function estrelasHtml(n){
   if(n == null) return '<span class="muted">—</span>';
-  return '<span class="stars">' + '★'.repeat(n) + '☆'.repeat(5-n) + '</span>';
+  return '<span class="stars" role="img" aria-label="' + n + ' de 5 estrelas">' + '★'.repeat(n) + '<span class="off">' + '★'.repeat(5-n) + '</span></span>';
 }
 
 function formatarData(iso){
@@ -175,56 +264,114 @@ function formatarData(iso){
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
 }
 
+function media(lista, campo, tipo){
+  const notas = lista.filter(a => a.tipo === tipo && a[campo] != null).map(a => a[campo]);
+  return notas.length ? notas.reduce((x,y)=>x+y,0)/notas.length : null;
+}
+
+function fmtMedia(m){
+  return m == null ? '—' : m.toFixed(1).replace('.', ',');
+}
+
+function starsMedia(m){
+  return m == null ? '' : estrelasHtml(Math.round(m));
+}
+
+function plural(n, s, p){
+  return n + ' ' + (n === 1 ? s : p);
+}
+
 function renderStats(lista){
-  const total = lista.length;
-  const porRestaurante = {};
-  lista.forEach(a => { porRestaurante[a.restaurante] = (porRestaurante[a.restaurante]||0)+1; });
-
-  const notasDigital = lista.filter(a => a.tipo === 'cardapio_digital' && a.nota_digital != null).map(a => a.nota_digital);
-  const mediaDigital = notasDigital.length ? (notasDigital.reduce((a,b)=>a+b,0)/notasDigital.length).toFixed(1) : '—';
-
-  const notasEstab = lista.filter(a => a.tipo === 'estabelecimento' && a.nota_estabelecimento != null).map(a => a.nota_estabelecimento);
-  const mediaEstab = notasEstab.length ? (notasEstab.reduce((a,b)=>a+b,0)/notasEstab.length).toFixed(1) : '—';
+  const mediaDigital = media(lista, 'nota_digital', 'cardapio_digital');
+  const mediaEstab = media(lista, 'nota_estabelecimento', 'estabelecimento');
+  const nDigital = lista.filter(a => a.tipo === 'cardapio_digital').length;
+  const nEstab = lista.filter(a => a.tipo === 'estabelecimento').length;
 
   document.getElementById('stats').innerHTML = `
-    <div class="stat-card"><div class="lbl">Total de avaliações</div><div class="val">${total}</div></div>
-    <div class="stat-card"><div class="lbl">Média cardápio digital</div><div class="val">${mediaDigital}</div></div>
-    <div class="stat-card"><div class="lbl">Média estabelecimento</div><div class="val">${mediaEstab}</div></div>
+    <div class="kpi">
+      <div class="kpi-head"><div class="kpi-icon">💬</div><div class="lbl">Total de avaliações</div></div>
+      <div class="val">${lista.length}</div>
+      <div class="sub">${plural(nDigital, 'do cardápio digital', 'do cardápio digital')} · ${plural(nEstab, 'do estabelecimento', 'do estabelecimento')}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-head"><div class="kpi-icon">📱</div><div class="lbl">Média cardápio digital</div></div>
+      <div class="val">${fmtMedia(mediaDigital)}<small>/ 5</small></div>
+      <div class="sub">${starsMedia(mediaDigital) || 'Sem notas ainda'}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-head"><div class="kpi-icon">🏠</div><div class="lbl">Média estabelecimento</div></div>
+      <div class="val">${fmtMedia(mediaEstab)}<small>/ 5</small></div>
+      <div class="sub">${starsMedia(mediaEstab) || 'Sem notas ainda'}</div>
+    </div>
   `;
+}
+
+function barLine(rotulo, m, cls){
+  const pct = m == null ? 0 : Math.round(m / 5 * 100);
+  return `<div class="bar-line"><span>${rotulo}</span><div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div><span class="bar-val">${fmtMedia(m)}</span></div>`;
+}
+
+function agruparPorRestaurante(lista){
+  const grupos = {};
+  lista.forEach(a => { (grupos[a.restaurante] = grupos[a.restaurante] || []).push(a); });
+  return Object.keys(grupos)
+    .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }))
+    .map(nome => ({ nome, itens: grupos[nome].slice().sort((x, y) => new Date(y.created_at) - new Date(x.created_at)) }));
+}
+
+function renderPainel(lista){
+  const panel = document.getElementById('panel-restaurantes');
+  const grupos = agruparPorRestaurante(lista);
+  if(!grupos.length){ panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  panel.innerHTML = `
+    <div class="panel-head"><h3>Desempenho por restaurante</h3><span>Média das notas, de 0 a 5</span></div>
+    <div class="rest-list">
+      ${grupos.map(g => `
+        <div class="rest-row">
+          <div><div class="rest-name">${esc(g.nome)}</div><div class="rest-count">${plural(g.itens.length, 'avaliação', 'avaliações')}</div></div>
+          <div class="bars">
+            ${barLine('Cardápio', media(g.itens, 'nota_digital', 'cardapio_digital'), '')}
+            ${barLine('Estabelecimento',media(g.itens, 'nota_estabelecimento', 'estabelecimento'), 'estab')}
+          </div>
+        </div>`).join('')}
+    </div>`;
 }
 
 function renderTabela(lista){
   const container = document.getElementById('tabela-container');
+  container.className = '';
   if(lista.length === 0){
-    container.innerHTML = '<div class="empty">Nenhuma avaliação encontrada.</div>';
+    container.innerHTML = '<div class="empty"><div class="big">🔍</div>Nenhuma avaliação encontrada com esses filtros.</div>';
     return;
   }
-  let rows = lista.map(a => {
-    let notasCol = '';
-    if(a.tipo === 'cardapio_digital'){
-      notasCol = `<div>Ambiente/Restaurante: ${estrelasHtml(a.nota_tradicional)}</div><div>Cardápio digital: ${estrelasHtml(a.nota_digital)}</div>`;
-    } else {
-      notasCol = `<div>Estabelecimento: ${estrelasHtml(a.nota_estabelecimento)}</div>`;
-    }
-    const tagClass = a.tipo === 'cardapio_digital' ? 'tag-digital' : 'tag-estab';
-    const tagLabel = a.tipo === 'cardapio_digital' ? 'Cardápio digital' : 'Estabelecimento';
-    return `
-      <tr>
-        <td class="muted">${formatarData(a.created_at)}</td>
-        <td>${a.restaurante}</td>
-        <td class="muted">${a.mesa || '—'}</td>
-        <td><span class="tag ${tagClass}">${tagLabel}</span></td>
-        <td>${notasCol}</td>
-        <td class="sugestao">${a.sugestao ? a.sugestao : '<span class="muted">—</span>'}</td>
-      </tr>`;
+  const rows = agruparPorRestaurante(lista).map(g => {
+    const linhas = g.itens.map(a => {
+      let notasCol;
+      if(a.tipo === 'cardapio_digital'){
+        notasCol = `<div class="nota-line"><span class="k">Ambiente</span>${estrelasHtml(a.nota_tradicional)}</div><div class="nota-line"><span class="k">Cardápio</span>${estrelasHtml(a.nota_digital)}</div>`;
+      } else {
+        notasCol = `<div class="nota-line"><span class="k">Geral</span>${estrelasHtml(a.nota_estabelecimento)}</div>`;
+      }
+      const tagClass = a.tipo === 'cardapio_digital' ? 'tag-digital' : 'tag-estab';
+      const tagLabel = a.tipo === 'cardapio_digital' ? 'Cardápio digital' : 'Estabelecimento';
+      return `
+        <tr class="item">
+          <td class="muted" data-label="Data">${formatarData(a.created_at)}</td>
+          <td class="muted" data-label="Mesa">${esc(a.mesa) || '—'}</td>
+          <td data-label="Tipo"><span class="tag ${tagClass}">${tagLabel}</span></td>
+          <td data-label="Notas">${notasCol}</td>
+          <td class="sugestao" data-label="Sugestão">${a.sugestao ? esc(a.sugestao) : '<span class="muted">—</span>'}</td>
+        </tr>`;
+    }).join('');
+    return `<tr class="grp"><td colspan="5"><div class="grp-in"><span class="grp-name">${esc(g.nome)}</span><span class="grp-meta">${plural(g.itens.length, 'avaliação', 'avaliações')}</span></div></td></tr>${linhas}`;
   }).join('');
 
-  document.getElementById('tabela-container').innerHTML = `
+  container.innerHTML = `
     <table>
       <thead>
         <tr>
           <th>Data</th>
-          <th>Restaurante</th>
           <th>Mesa</th>
           <th>Tipo</th>
           <th>Notas</th>
@@ -236,13 +383,21 @@ function renderTabela(lista){
   `;
 }
 
+function montarFiltroRestaurantes(){
+  const sel = document.getElementById('filtro-restaurante');
+  sel.innerHTML = '<option value="">Todos os restaurantes</option>' +
+    RESTAURANTES.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+}
+
 function aplicarFiltros(){
   const restaurante = document.getElementById('filtro-restaurante').value;
   const tipo = document.getElementById('filtro-tipo').value;
   let lista = todasAvaliacoes;
   if(restaurante) lista = lista.filter(a => a.restaurante === restaurante);
   if(tipo) lista = lista.filter(a => a.tipo === tipo);
+  document.getElementById('filtro-count').textContent = 'Mostrando ' + plural(lista.length, 'avaliação', 'avaliações');
   renderStats(lista);
+  renderPainel(lista);
   renderTabela(lista);
 }
 
@@ -253,14 +408,12 @@ async function carregarAvaliacoes(){
     .select('*')
     .order('created_at', { ascending: false });
   if(error){
-    document.getElementById('tabela-container').innerHTML = '<div class="empty">Erro ao carregar avaliações: ' + error.message + '</div>';
+    document.getElementById('tabela-container').innerHTML = '<div class="empty">Erro ao carregar avaliações: ' + esc(error.message) + '</div>';
     return;
   }
   todasAvaliacoes = data || [];
   aplicarFiltros();
 }
-
-const RESTAURANTES = ['Pizzaria Premium', 'The Burger Foundry', 'Bistrô Elegante', 'Peso & Sabor'];
 
 function slug(nome){
   return nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-');
@@ -271,7 +424,7 @@ async function carregarSugestoes(){
   container.innerHTML = 'Carregando...';
   const { data, error } = await sb.from('sugestao_dia').select('*');
   if(error){
-    container.innerHTML = '<div class="empty">Erro ao carregar sugestões: ' + error.message + '</div>';
+    container.innerHTML = '<div class="empty">Erro ao carregar sugestões: ' + esc(error.message) + '</div>';
     return;
   }
   const porRestaurante = {};
@@ -284,10 +437,10 @@ async function carregarSugestoes(){
     const atualizado = registro && registro.texto ? 'Atualizado em ' + formatarData(registro.atualizado_em) : 'Ainda sem sugestão definida';
     return `
       <div class="sugestao-row">
-        <div class="nome">${nome}</div>
-        <textarea id="sug-texto-${id}" placeholder="Ex: Hoje o chef sugere a Pizza Margherita Premium, feita com muçarela de búfala fresca...">${texto}</textarea>
+        <div class="nome"><span class="ico">🍽️</span>${esc(nome)}</div>
+        <textarea id="sug-texto-${id}" placeholder="Ex: Hoje o chef sugere a Pizza Margherita Premium, feita com muçarela de búfala fresca...">${esc(texto)}</textarea>
         <div class="sugestao-row-actions">
-          <button onclick="salvarSugestao('${nome}', '${id}')" id="sug-btn-${id}">Salvar</button>
+          <button onclick="salvarSugestao('${nome.replace(/'/g, "\\'")}', '${id}')" id="sug-btn-${id}">Salvar</button>
           <span class="sugestao-status" id="sug-status-${id}">${atualizado}</span>
         </div>
       </div>`;
@@ -335,6 +488,7 @@ async function mostrarApp(){
   if(await redirecionarSeRestaurante()) return;
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('app').classList.add('show');
+  montarFiltroRestaurantes();
   carregarAvaliacoes();
   carregarSugestoes();
 }
