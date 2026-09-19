@@ -1,4 +1,4 @@
-const CACHE_NAME = 'painel-ad-v1';
+const CACHE_NAME = 'painel-ad-v2';
 
 const PRECACHE_URLS = [
   './index.html',
@@ -23,7 +23,7 @@ const ADMIN_PATHS = ['/', '/index.html', '/crm.html', '/financeiro.html', '/lead
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then((cache) => cache.addAll(PRECACHE_URLS.map((url) => new Request(url, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });

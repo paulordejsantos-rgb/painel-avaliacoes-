@@ -33,8 +33,6 @@
   .login-box button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;}
   .login-err{color:#e35b5b;font-size:13px;margin-top:10px;text-align:center;min-height:16px;}
 
-  #gate-content{display:none;}
-
   .app{display:none;}
   .app.show{display:block;}
   header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
@@ -120,18 +118,6 @@
 </style>
 </head>
 <body>
-
-  <div class="login-wrap" id="senha-gate">
-    <div class="login-box">
-      <h1>Acesso restrito</h1>
-      <p>Leads — A Casa & Designer</p>
-      <input type="password" id="gate-senha" placeholder="Senha de acesso" autocomplete="off">
-      <button id="gate-btn" onclick="verificarSenhaGate()">Entrar</button>
-      <div class="login-err" id="gate-err"></div>
-    </div>
-  </div>
-
-  <div id="gate-content">
 
   <div class="login-wrap" id="login-wrap">
     <div class="login-box">
@@ -265,50 +251,6 @@
       <button class="btn-excluir" id="btn-excluir-lead" style="display:none;" onclick="excluirLead()">Excluir lead</button>
     </div>
   </div>
-
-  </div><!-- /gate-content -->
-
-<script>
-const GATE_SENHA_HASH = '18413b37fa3f9d0a87dcf65cbda8d456e970435e71a214aed64de92a44450204';
-const GATE_SESSION_KEY = 'leads_gate_ok';
-
-async function sha256Hex(texto){
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function verificarSenhaGate(){
-  const input = document.getElementById('gate-senha');
-  const btn = document.getElementById('gate-btn');
-  const err = document.getElementById('gate-err');
-  const senha = input.value;
-  err.textContent = '';
-  if(!senha){ err.textContent = 'Digite a senha.'; return; }
-  btn.disabled = true;
-  const hash = await sha256Hex(senha);
-  btn.disabled = false;
-  if(hash !== GATE_SENHA_HASH){
-    err.textContent = 'Senha incorreta.';
-    input.value = '';
-    return;
-  }
-  sessionStorage.setItem(GATE_SESSION_KEY, '1');
-  abrirGateContent();
-}
-
-function abrirGateContent(){
-  document.getElementById('senha-gate').style.display = 'none';
-  document.getElementById('gate-content').style.display = 'block';
-}
-
-document.getElementById('gate-senha').addEventListener('keydown', e => {
-  if(e.key === 'Enter') verificarSenhaGate();
-});
-
-if(sessionStorage.getItem(GATE_SESSION_KEY) === '1'){
-  abrirGateContent();
-}
-</script>
 
 <script>
 const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
