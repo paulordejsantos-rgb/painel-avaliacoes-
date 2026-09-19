@@ -14,8 +14,16 @@ Painel administrativo estático (HTML + Supabase, hospedado na Vercel). Cada aba
 - Ao adicionar um restaurante novo: incluir em `RESTAURANTES` e em `SLUG_POR_RESTAURANTE` (ver skill `novo-cliente`).
 
 ## Login unificado
-- Todas as abas do painel usam só o login Supabase (e-mail + senha); a sessão é compartilhada entre as páginas. A antiga tela "Acesso restrito" (senha por hash no navegador) da aba Leads foi removida — não recriar: era só uma trava de tela, não protegia os dados.
+- Todas as abas do painel usam só o login Supabase (e-mail + senha); a sessão é compartilhada entre as páginas. A antiga tela "Acesso restrito" (senha por hash no navegador) da aba Leads foi removida — não recriar: era só uma trava de tela, não protegia os dados. A proteção real dos dados é o RLS (seção abaixo).
 - O gate de `proposta.html` (confirmar telefone do cliente) é outra coisa e permanece.
+
+## Banco (Supabase, projeto `chwxepwdsyspcdkalaic`) e permissões
+- Quem é admin: linhas da tabela `public.admins` (`user_id`). Todas as políticas "apenas admin" (leads, `crm_*`, `financeiro_cobrancas`, escrita de `sugestao_dia`, leitura total de `avaliacoes`) exigem estar nessa tabela. Restaurantes ficam em `perfis_restaurante` e só veem as próprias avaliações. Conta nova sem linha em nenhuma das duas não acessa nada.
+- Antes (até 19/09/2026) valia "quem não é restaurante é admin", que liberaria qualquer conta nova. Não voltar a esse padrão em tabelas novas.
+- Adicionar admin: `insert into public.admins (user_id) values ('<uuid>');` (a API não escreve nessa tabela).
+- Tabela nova em `public`: o gatilho `ensure_rls` liga o RLS sozinho, mas é preciso criar as políticas (sem política, ninguém acessa).
+- Migrações versionadas em `migracoes/` (aplicada: `2026-09-19_admins_explicitos_rls.sql`; desfazer com o `_ROLLBACK.sql`). Aplicar migração exige confirmação explícita: é produção.
+- Pendente no painel do Supabase (Authentication): desligar cadastro público e ligar proteção contra senhas vazadas.
 
 ## Como testar sem senha
 O login usa Supabase Auth. Para ver a tela localmente: `python -m http.server`, abrir a página, esconder `#login-wrap`, mostrar `#app`, chamar `montarFiltroRestaurantes()` e preencher `todasAvaliacoes` com dados de exemplo + `aplicarFiltros()`.
