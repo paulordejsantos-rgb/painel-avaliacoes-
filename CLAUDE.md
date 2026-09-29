@@ -13,6 +13,14 @@ Painel administrativo estático (HTML + Supabase, hospedado na Vercel). Cada aba
 - Todo texto vindo do banco passa por `esc()` (evita HTML injetado em sugestões).
 - Ao adicionar um restaurante novo: incluir em `RESTAURANTES` e em `SLUG_POR_RESTAURANTE` (ver skill `novo-cliente`).
 
+## Aba Documentos (`documentos.html`)
+- Reúne contratos/propostas, manuais, materiais comerciais e instaladores num só lugar, com upload/download reais de arquivo (não só links).
+- Tabela `public.documentos` (Supabase): `restaurante` (nome exato de `RESTAURANTES`, ou `NULL` para documento "Geral" da empresa — instaladores e comercial normalmente são Geral), `categoria` (`contrato` | `manual` | `comercial` | `instalador`), `nome_arquivo`, `storage_path`, `tamanho_bytes`.
+- Arquivos ficam no bucket privado `documentos` do Supabase Storage, em pastas por slug (`SLUG_POR_RESTAURANTE`) + categoria, ex.: `pizzaria-premium/contrato/172xxxx_arquivo.pdf`; documentos Gerais ficam em `geral/<categoria>/...`.
+- RLS (tabela e storage): admin (`public.admins`) tem acesso total; cada restaurante só lê (não escreve) os próprios documentos — filtragem via `perfis_restaurante` e, no Storage, via a função `public.restaurante_do_slug(slug)` que traduz a pasta para o nome do restaurante.
+- Portal de cada restaurante (`pizzaria-premium/index.html` etc., os 4 são idênticos) ganhou uma segunda aba interna "Documentos" (troca de seção via JS, sem sair da página) só de leitura/download — upload e exclusão só existem em `documentos.html` (admin).
+- Download usa `createSignedUrl` (link temporário de 60s) — nunca URL pública direta.
+
 ## Login unificado
 - Todas as abas do painel usam só o login Supabase (e-mail + senha); a sessão é compartilhada entre as páginas. A antiga tela "Acesso restrito" (senha por hash no navegador) da aba Leads foi removida — não recriar: era só uma trava de tela, não protegia os dados. A proteção real dos dados é o RLS (seção abaixo).
 - O gate de `proposta.html` (confirmar telefone do cliente) é outra coisa e permanece.

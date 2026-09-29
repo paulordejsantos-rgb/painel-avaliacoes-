@@ -26,9 +26,20 @@
   /* ---- DASHBOARD ---- */
   .app{display:none;}
   .app.show{display:block;}
-  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
   header.top h1{font-size:18px;color:var(--gold);margin:0;}
+  header.top .nav-links{display:flex;gap:14px;font-size:13px;}
+  header.top .nav-links a{color:var(--muted);text-decoration:none;cursor:pointer;}
+  header.top .nav-links a.active{color:var(--gold);font-weight:700;}
   header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+
+  .doc-grupo{margin-bottom:18px;}
+  .doc-grupo h4{font-size:12px;color:var(--gold);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 8px;}
+  .doc-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+  .doc-item .doc-nome{font-size:13px;}
+  .doc-item .doc-data{font-size:11px;color:var(--muted);}
+  .doc-item button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer;}
+  .doc-item button:hover{border-color:var(--gold);color:var(--gold);}
 
   .main{max-width:1100px;margin:0 auto;padding:20px;}
 
@@ -71,22 +82,32 @@
   <div class="app" id="app">
     <header class="top">
       <h1 id="titulo-header">⭐ Painel de Avaliações</h1>
+      <div class="nav-links">
+        <a id="nav-avaliacoes" class="active" onclick="mostrarSecao('avaliacoes')">Avaliações</a>
+        <a id="nav-documentos" onclick="mostrarSecao('documentos')">Documentos</a>
+      </div>
       <button onclick="fazerLogout()">Sair</button>
     </header>
 
     <div class="main">
-      <div class="stats" id="stats"></div>
+      <div id="secao-avaliacoes">
+        <div class="stats" id="stats"></div>
 
-      <div class="filters">
-        <select id="filtro-tipo" onchange="aplicarFiltros()">
-          <option value="">Todos os tipos</option>
-          <option value="cardapio_digital">Cardápio digital</option>
-          <option value="estabelecimento">Estabelecimento</option>
-        </select>
+        <div class="filters">
+          <select id="filtro-tipo" onchange="aplicarFiltros()">
+            <option value="">Todos os tipos</option>
+            <option value="cardapio_digital">Cardápio digital</option>
+            <option value="estabelecimento">Estabelecimento</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <div id="tabela-container" class="loading">Carregando...</div>
+        </div>
       </div>
 
-      <div class="table-wrap">
-        <div id="tabela-container" class="loading">Carregando...</div>
+      <div id="secao-documentos" style="display:none;">
+        <div id="documentos-container" class="loading">Carregando...</div>
       </div>
     </div>
   </div>
@@ -213,6 +234,87 @@ async function carregarAvaliacoes(){
   }
   todasAvaliacoes = data || [];
   aplicarFiltros();
+}
+
+const CATEGORIA_LABEL = {
+  contrato: 'Contrato/Proposta',
+  manual: 'Manual',
+  comercial: 'Comercial/Marketing',
+  instalador: 'Instalador'
+};
+
+let documentosCarregados = false;
+
+function esc(t){
+  return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function mostrarSecao(nome){
+  document.getElementById('secao-avaliacoes').style.display = nome === 'avaliacoes' ? 'block' : 'none';
+  document.getElementById('secao-documentos').style.display = nome === 'documentos' ? 'block' : 'none';
+  document.getElementById('nav-avaliacoes').classList.toggle('active', nome === 'avaliacoes');
+  document.getElementById('nav-documentos').classList.toggle('active', nome === 'documentos');
+  if(nome === 'documentos' && !documentosCarregados){
+    documentosCarregados = true;
+    carregarDocumentos();
+  }
+}
+
+async function baixarDocumento(storagePath, nomeArquivo){
+  const { data, error } = await sb.storage.from('documentos').createSignedUrl(storagePath, 60);
+  if(error){ alert('Erro ao gerar link de download: ' + error.message); return; }
+  const a = document.createElement('a');
+  a.href = data.signedUrl;
+  a.download = nomeArquivo;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function formatarDataDoc(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR');
+}
+
+function renderDocumentos(lista){
+  const container = document.getElementById('documentos-container');
+  if(lista.length === 0){
+    container.innerHTML = '<div class="empty">Nenhum documento disponível ainda.</div>';
+    return;
+  }
+  const grupos = {};
+  lista.forEach(d => {
+    if(!grupos[d.categoria]) grupos[d.categoria] = [];
+    grupos[d.categoria].push(d);
+  });
+  const ordem = ['contrato', 'manual', 'comercial', 'instalador'];
+  container.innerHTML = ordem.filter(c => grupos[c]).map(c => `
+    <div class="doc-grupo">
+      <h4>${esc(CATEGORIA_LABEL[c])}</h4>
+      ${grupos[c].map(d => `
+        <div class="doc-item">
+          <div>
+            <div class="doc-nome">${esc(d.nome_arquivo)}</div>
+            <div class="doc-data">${formatarDataDoc(d.criado_em)}</div>
+          </div>
+          <button onclick="baixarDocumento('${esc(d.storage_path)}','${esc(d.nome_arquivo)}')">Baixar</button>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+async function carregarDocumentos(){
+  const { data, error } = await sb
+    .from('documentos')
+    .select('*')
+    .order('criado_em', { ascending: false });
+  if(error){
+    document.getElementById('documentos-container').innerHTML = '<div class="empty">Erro ao carregar documentos: ' + error.message + '</div>';
+    return;
+  }
+  renderDocumentos(data || []);
 }
 
 async function carregarNomeRestaurante(){

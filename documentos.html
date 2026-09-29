@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentos — A Casa & Designer</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="icon" href="assets/images/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="assets/images/favicon-64.png" sizes="64x64" type="image/png">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Painel A&D">
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:360px;}
+  .login-box h1{font-size:20px;color:var(--gold);margin:0 0 4px;text-align:center;}
+  .login-box p{font-size:13px;color:var(--muted);margin:0 0 24px;text-align:center;}
+  .login-box input{width:100%;padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:14px;}
+  .login-box button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;}
+  .login-box button:disabled{opacity:0.5;cursor:not-allowed;}
+  .login-err{color:#e35b5b;font-size:13px;margin-top:10px;text-align:center;min-height:16px;}
+
+  .app{display:none;}
+  .app.show{display:block;}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
+  header.top h1{font-size:18px;color:var(--gold);margin:0;}
+  header.top .nav-links{display:flex;gap:14px;font-size:13px;flex-wrap:wrap;}
+  header.top .nav-links a{color:var(--muted);text-decoration:none;}
+  header.top .nav-links a.active{color:var(--gold);font-weight:700;}
+  header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+
+  .main{max-width:1200px;margin:0 auto;padding:20px;}
+
+  .upload-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:20px;}
+  .upload-card h3{font-size:14px;margin:0 0 14px;color:var(--txt);}
+  .upload-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .upload-row select, .upload-row input[type=file]{background:#000;color:var(--txt);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;}
+  .upload-row select{cursor:pointer;}
+  .upload-row button{background:var(--gold);color:#000;font-weight:700;border:none;border-radius:8px;padding:10px 18px;font-size:13px;cursor:pointer;}
+  .upload-row button:disabled{opacity:0.5;cursor:not-allowed;}
+  .upload-msg{font-size:13px;margin-top:10px;min-height:16px;}
+  .upload-msg.erro{color:#e35b5b;}
+  .upload-msg.ok{color:#5ac878;}
+
+  .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .filters select{background:var(--card);color:var(--txt);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;}
+
+  .grupo{margin-bottom:22px;}
+  .grupo h3{font-size:14px;color:var(--gold);margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+
+  .tabela-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:12px 14px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+  .tag-contrato{background:rgba(90,200,120,0.15);color:#5ac878;}
+  .tag-manual{background:rgba(122,176,232,0.15);color:#7ab0e8;}
+  .tag-comercial{background:rgba(201,168,76,0.15);color:var(--gold);}
+  .tag-instalador{background:rgba(180,120,220,0.15);color:#b478dc;}
+  .acoes{display:flex;gap:8px;}
+  .acoes button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;}
+  .acoes button:hover{border-color:var(--gold);color:var(--gold);}
+  .acoes button.excluir:hover{border-color:#e35b5b;color:#e35b5b;}
+  .muted{color:var(--muted);}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+  .loading{padding:40px;text-align:center;color:var(--muted);}
+</style>
+</head>
+<body>
+
+  <div class="login-wrap" id="login-wrap">
+    <div class="login-box">
+      <h1>Documentos</h1>
+      <p>A Casa & Designer</p>
+      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+      <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+      <button id="login-btn" onclick="fazerLogin()">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="top">
+      <h1>📁 Documentos</h1>
+      <div class="nav-links">
+        <a href="index.html">Avaliações</a>
+        <a href="crm.html">CRM</a>
+        <a href="financeiro.html">Financeiro</a>
+        <a href="leads.html">Leads</a>
+        <a href="instalacao.html">Instalação</a>
+        <a href="documentos.html" class="active">Documentos</a>
+        <a href="central.html">Central</a>
+      </div>
+      <button onclick="fazerLogout()">Sair</button>
+    </header>
+
+    <div class="main">
+
+      <div class="upload-card">
+        <h3>Enviar novo documento</h3>
+        <div class="upload-row">
+          <select id="up-restaurante">
+            <option value="">Geral (empresa, não é de um cliente)</option>
+          </select>
+          <select id="up-categoria">
+            <option value="contrato">Contrato/Proposta</option>
+            <option value="manual">Manual</option>
+            <option value="comercial">Comercial/Marketing</option>
+            <option value="instalador">Instalador</option>
+          </select>
+          <input type="file" id="up-arquivo">
+          <button id="up-btn" onclick="enviarDocumento()">Enviar</button>
+        </div>
+        <div class="upload-msg" id="up-msg"></div>
+      </div>
+
+      <div class="filters">
+        <select id="filtro-restaurante" onchange="aplicarFiltros()">
+          <option value="">Todos os restaurantes</option>
+          <option value="__geral__">Geral (empresa)</option>
+        </select>
+        <select id="filtro-categoria" onchange="aplicarFiltros()">
+          <option value="">Todas as categorias</option>
+          <option value="contrato">Contrato/Proposta</option>
+          <option value="manual">Manual</option>
+          <option value="comercial">Comercial/Marketing</option>
+          <option value="instalador">Instalador</option>
+        </select>
+      </div>
+
+      <div id="lista-container" class="loading">Carregando...</div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const RESTAURANTES = ['Pizzaria Premium', 'The Burger Foundry', 'Bistrô Elegante', 'Peso & Sabor']
+  .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+const SLUG_POR_RESTAURANTE = {
+  'Pizzaria Premium': 'pizzaria-premium',
+  'The Burger Foundry': 'burger-foundry',
+  'Bistrô Elegante': 'bistro-elegante',
+  'Peso & Sabor': 'peso-e-sabor'
+};
+
+const CATEGORIA_LABEL = {
+  contrato: 'Contrato/Proposta',
+  manual: 'Manual',
+  comercial: 'Comercial/Marketing',
+  instalador: 'Instalador'
+};
+
+let todosDocumentos = [];
+
+function esc(t){
+  return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function montarSelectRestaurantes(){
+  const optsExtra = RESTAURANTES.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  document.getElementById('up-restaurante').insertAdjacentHTML('beforeend', optsExtra);
+  document.getElementById('filtro-restaurante').insertAdjacentHTML('beforeend', optsExtra);
+}
+
+async function fazerLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if(!email || !senha){ err.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+  if(error){ err.textContent = 'E-mail ou senha inválidos.'; return; }
+  mostrarApp();
+}
+
+async function fazerLogout(){
+  await sb.auth.signOut();
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-wrap').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-senha').value = '';
+}
+
+async function redirecionarSeRestaurante(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return false;
+  const { data } = await sb.from('perfis_restaurante').select('restaurante').eq('user_id', user.id).maybeSingle();
+  if(data && data.restaurante && SLUG_POR_RESTAURANTE[data.restaurante]){
+    window.location.href = '/' + SLUG_POR_RESTAURANTE[data.restaurante] + '/';
+    return true;
+  }
+  return false;
+}
+
+function formatarData(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+
+function formatarTamanho(bytes){
+  if(!bytes) return '—';
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+async function baixarDocumento(storagePath, nomeArquivo){
+  const { data, error } = await sb.storage.from('documentos').createSignedUrl(storagePath, 60);
+  if(error){ alert('Erro ao gerar link de download: ' + error.message); return; }
+  const a = document.createElement('a');
+  a.href = data.signedUrl;
+  a.download = nomeArquivo;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+async function excluirDocumento(id, storagePath){
+  if(!confirm('Excluir este documento? Essa ação não pode ser desfeita.')) return;
+  const { error: errStorage } = await sb.storage.from('documentos').remove([storagePath]);
+  if(errStorage){ alert('Erro ao excluir arquivo: ' + errStorage.message); return; }
+  const { error: errTabela } = await sb.from('documentos').delete().eq('id', id);
+  if(errTabela){ alert('Erro ao excluir registro: ' + errTabela.message); return; }
+  carregarDocumentos();
+}
+
+function renderLista(lista){
+  const container = document.getElementById('lista-container');
+  if(lista.length === 0){
+    container.innerHTML = '<div class="empty">Nenhum documento encontrado.</div>';
+    return;
+  }
+
+  const grupos = {};
+  lista.forEach(d => {
+    const chave = d.restaurante || '__geral__';
+    if(!grupos[chave]) grupos[chave] = [];
+    grupos[chave].push(d);
+  });
+
+  const ordemGrupos = [...RESTAURANTES.filter(r => grupos[r]), ...(grupos['__geral__'] ? ['__geral__'] : [])];
+
+  const html = ordemGrupos.map(chave => {
+    const nomeGrupo = chave === '__geral__' ? 'Geral (empresa)' : chave;
+    const docs = grupos[chave].slice().sort((a,b) => new Date(b.criado_em) - new Date(a.criado_em));
+    const linhas = docs.map(d => {
+      const tagClass = 'tag-' + d.categoria;
+      return `
+        <tr>
+          <td class="muted">${formatarData(d.criado_em)}</td>
+          <td>${esc(d.nome_arquivo)}</td>
+          <td><span class="tag ${tagClass}">${esc(CATEGORIA_LABEL[d.categoria] || d.categoria)}</span></td>
+          <td class="muted">${formatarTamanho(d.tamanho_bytes)}</td>
+          <td class="acoes">
+            <button onclick="baixarDocumento('${esc(d.storage_path)}','${esc(d.nome_arquivo)}')">Baixar</button>
+            <button class="excluir" onclick="excluirDocumento('${d.id}','${esc(d.storage_path)}')">Excluir</button>
+          </td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <div class="grupo">
+        <h3>${esc(nomeGrupo)} <span class="muted" style="font-weight:400;">— ${docs.length} documento${docs.length === 1 ? '' : 's'}</span></h3>
+        <div class="tabela-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Enviado em</th>
+                <th>Arquivo</th>
+                <th>Categoria</th>
+                <th>Tamanho</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>${linhas}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = html;
+}
+
+function aplicarFiltros(){
+  const restaurante = document.getElementById('filtro-restaurante').value;
+  const categoria = document.getElementById('filtro-categoria').value;
+  let lista = todosDocumentos;
+  if(restaurante === '__geral__') lista = lista.filter(d => !d.restaurante);
+  else if(restaurante) lista = lista.filter(d => d.restaurante === restaurante);
+  if(categoria) lista = lista.filter(d => d.categoria === categoria);
+  renderLista(lista);
+}
+
+async function carregarDocumentos(){
+  document.getElementById('lista-container').innerHTML = '<div class="loading">Carregando...</div>';
+  const { data, error } = await sb
+    .from('documentos')
+    .select('*')
+    .order('criado_em', { ascending: false });
+  if(error){
+    document.getElementById('lista-container').innerHTML = '<div class="empty">Erro ao carregar documentos: ' + error.message + '</div>';
+    return;
+  }
+  todosDocumentos = data || [];
+  aplicarFiltros();
+}
+
+function mostrarMsgUpload(texto, tipo){
+  const el = document.getElementById('up-msg');
+  el.textContent = texto;
+  el.className = 'upload-msg ' + (tipo || '');
+}
+
+async function enviarDocumento(){
+  const restaurante = document.getElementById('up-restaurante').value || null;
+  const categoria = document.getElementById('up-categoria').value;
+  const arquivoInput = document.getElementById('up-arquivo');
+  const arquivo = arquivoInput.files[0];
+
+  if(!arquivo){ mostrarMsgUpload('Escolha um arquivo antes de enviar.', 'erro'); return; }
+
+  const btn = document.getElementById('up-btn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  mostrarMsgUpload('', '');
+
+  const pasta = restaurante ? SLUG_POR_RESTAURANTE[restaurante] : 'geral';
+  const nomeSeguro = arquivo.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const caminho = `${pasta}/${categoria}/${Date.now()}_${nomeSeguro}`;
+
+  const { error: errUpload } = await sb.storage.from('documentos').upload(caminho, arquivo);
+  if(errUpload){
+    btn.disabled = false;
+    btn.textContent = 'Enviar';
+    mostrarMsgUpload('Erro ao enviar arquivo: ' + errUpload.message, 'erro');
+    return;
+  }
+
+  const { data: { user } } = await sb.auth.getUser();
+  const { error: errInsert } = await sb.from('documentos').insert({
+    restaurante,
+    categoria,
+    nome_arquivo: arquivo.name,
+    storage_path: caminho,
+    tamanho_bytes: arquivo.size,
+    enviado_por: user ? user.id : null
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Enviar';
+
+  if(errInsert){
+    mostrarMsgUpload('Arquivo enviado, mas houve erro ao salvar o registro: ' + errInsert.message, 'erro');
+    return;
+  }
+
+  mostrarMsgUpload('Documento enviado com sucesso!', 'ok');
+  arquivoInput.value = '';
+  carregarDocumentos();
+}
+
+async function mostrarApp(){
+  if(await redirecionarSeRestaurante()) return;
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  carregarDocumentos();
+}
+
+(async function init(){
+  montarSelectRestaurantes();
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ mostrarApp(); }
+})();
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if(e.key === 'Enter') fazerLogin();
+});
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(err){
+      console.warn('Falha ao registrar service worker:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
