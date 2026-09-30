@@ -104,6 +104,7 @@
 
       <div class="toc">
         <a href="#visao-geral">Visão geral</a>
+        <a href="#colaboradores">Colaboradores (equipe)</a>
         <a href="#avaliacoes">Avaliações</a>
         <a href="#crm">CRM</a>
         <a href="#financeiro">Financeiro</a>
@@ -132,10 +133,31 @@
         <p>Por trás de tudo está o <strong>Supabase</strong> (banco de dados + login). Existem dois tipos de conta:</p>
         <ul>
           <li><strong>Administrador</strong> (o Paulo, e quem mais for cadastrado como admin) — vê e mexe em tudo: todos os restaurantes, CRM, financeiro, leads, instalação e documentos.</li>
+          <li><strong>Colaborador</strong> (equipe interna) — acesso restrito ao operacional, sem ver CRM nem Financeiro (veja "Colaboradores" abaixo).</li>
           <li><strong>Restaurante</strong> (o cliente) — só enxerga o que é dele: as próprias avaliações e os próprios documentos, num painel reduzido (veja "Portal do restaurante" abaixo).</li>
         </ul>
-        <p>Uma conta nova, por padrão, <strong>não vê nada</strong> até ser explicitamente marcada como admin ou vinculada a um restaurante — isso é proposital, é a trava de segurança do sistema.</p>
+        <p>Uma conta nova, por padrão, <strong>não vê nada</strong> até ser explicitamente marcada como admin, colaborador ou vinculada a um restaurante — isso é proposital, é a trava de segurança do sistema.</p>
         <div class="nota">Detalhe técnico para quem for mexer no código: essa separação é feita por Row Level Security (RLS) no Supabase — cada tabela tem regras próprias de quem pode ler/escrever o quê. Não é o login que protege os dados, é o RLS.</div>
+      </div>
+
+      <div class="sec" id="colaboradores">
+        <div class="sec-head">
+          <div class="sec-icon">🧑‍💼</div>
+          <div>
+            <h3>Colaboradores (equipe interna)</h3>
+            <span class="tag">Acesso restrito, sem tela própria de cadastro</span>
+          </div>
+        </div>
+        <p>Colaborador é quem ajuda a tocar a operação do dia a dia, mas não precisa (nem deve) ver dados financeiros ou de negociação com clientes.</p>
+        <p>Com um login de colaborador, a pessoa acessa:</p>
+        <ul>
+          <li><strong>Avaliações</strong> — vê tudo, igual admin.</li>
+          <li><strong>Leads</strong> — pode ver, cadastrar e atualizar (não pode excluir).</li>
+          <li><strong>Instalação</strong> — acompanha e atualiza o progresso normalmente.</li>
+          <li><strong>Documentos</strong> — envia, baixa e exclui, igual admin.</li>
+        </ul>
+        <p>Os links de <strong>CRM</strong> e <strong>Financeiro</strong> somem do menu para colaboradores, e essas duas páginas bloqueiam e mandam de volta para Avaliações quem tentar abri-las direto pelo endereço.</p>
+        <div class="nota">Não existe uma tela para o próprio Paulo criar colaboradores sozinho ainda — para dar acesso a alguém novo, é só pedir para o Claude cadastrar o e-mail dessa pessoa como colaborador.</div>
       </div>
 
       <h2 class="grupo">Abas do Painel A&D (uso do administrador)</h2>
@@ -145,7 +167,7 @@
           <div class="sec-icon">⭐</div>
           <div><h3>Avaliações</h3><span class="tag">index.html</span></div>
         </div>
-        <span class="quem">Admin</span>
+        <span class="quem">Admin e Colaborador</span>
         <p>Tela inicial do painel. Mostra todas as avaliações que os clientes finais deixaram em cada restaurante — nota do cardápio digital, nota do ambiente/estabelecimento e a sugestão escrita, agrupadas por restaurante (A→Z) e da mais recente para a mais antiga.</p>
         <ul>
           <li>Cards no topo mostram o total de avaliações e as médias gerais.</li>
@@ -180,7 +202,7 @@
           <div class="sec-icon">🎯</div>
           <div><h3>Leads</h3><span class="tag">leads.html</span></div>
         </div>
-        <span class="quem">Admin</span>
+        <span class="quem">Admin e Colaborador</span>
         <p>Lista de restaurantes interessados que ainda não são contatos formais no CRM — normalmente vindos do site institucional. Guarda nome do contato, WhatsApp, cidade/estado, plano de interesse e status (novo, contatado, proposta enviada etc.).</p>
         <p>Também guarda o link de pagamento (Mercado Pago) gerado para o lead e um checklist de instalação, que alimenta a aba Instalação.</p>
         <p>Botão "+ Novo Lead" cadastra manualmente (ex.: alguém que ligou ou mandou mensagem direto).</p>
@@ -191,7 +213,7 @@
           <div class="sec-icon">🔧</div>
           <div><h3>Instalação</h3><span class="tag">instalacao.html</span></div>
         </div>
-        <span class="quem">Admin</span>
+        <span class="quem">Admin e Colaborador</span>
         <p>Acompanha o progresso de implantação do cardápio digital em cada cliente fechado: <em>não iniciado</em>, <em>em andamento</em> ou <em>concluído</em>. A instalação é 100% remota — não exige visita presencial nem custo extra para o cliente.</p>
       </div>
 
@@ -200,7 +222,7 @@
           <div class="sec-icon">📁</div>
           <div><h3>Documentos</h3><span class="tag">documentos.html</span></div>
         </div>
-        <span class="quem">Admin (upload/exclusão) · Restaurante (leitura, na própria aba do portal)</span>
+        <span class="quem">Admin e Colaborador (upload/exclusão) · Restaurante (leitura, na própria aba do portal)</span>
         <p>Repositório central de arquivos: contratos/propostas assinadas, manuais de instalação/operação, materiais comerciais/marketing e instaladores/arquivos técnicos.</p>
         <ul>
           <li>Cada arquivo é enviado escolhendo um restaurante (ou "Geral", para algo que não é de um cliente específico — instaladores e material comercial normalmente são Geral) e uma categoria.</li>
@@ -215,7 +237,7 @@
           <div class="sec-icon">🧭</div>
           <div><h3>Central</h3><span class="tag">central.html</span></div>
         </div>
-        <span class="quem">Admin</span>
+        <span class="quem">Admin e Colaborador</span>
         <p>Página de atalhos — não tem dado próprio. Reúne links rápidos para o site institucional, o painel de Leads, e-mail (webmail Hostinger), WhatsApp Web, o blog e o painel de hospedagem (Nuven.pro). É a "página inicial" para não precisar guardar vários favoritos soltos no navegador.</p>
       </div>
 
@@ -317,8 +339,19 @@ async function redirecionarSeRestaurante(){
   return false;
 }
 
+async function aplicarRestricaoColaborador(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return;
+  const { data: admin } = await sb.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
+  if(admin) return;
+  const { data: colaborador } = await sb.from('colaboradores').select('user_id').eq('user_id', user.id).maybeSingle();
+  if(!colaborador) return;
+  document.querySelectorAll('.nav-links a[href="crm.html"], .nav-links a[href="financeiro.html"]').forEach(function(el){ el.remove(); });
+}
+
 async function mostrarApp(){
   if(await redirecionarSeRestaurante()) return;
+  await aplicarRestricaoColaborador();
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('app').classList.add('show');
 }

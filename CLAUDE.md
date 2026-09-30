@@ -30,7 +30,8 @@ Painel administrativo estático (HTML + Supabase, hospedado na Vercel). Cada aba
 - O gate de `proposta.html` (confirmar telefone do cliente) é outra coisa e permanece.
 
 ## Banco (Supabase, projeto `chwxepwdsyspcdkalaic`) e permissões
-- Quem é admin: linhas da tabela `public.admins` (`user_id`). Todas as políticas "apenas admin" (leads, `crm_*`, `financeiro_cobrancas`, escrita de `sugestao_dia`, leitura total de `avaliacoes`) exigem estar nessa tabela. Restaurantes ficam em `perfis_restaurante` e só veem as próprias avaliações. Conta nova sem linha em nenhuma das duas não acessa nada.
+- Quem é admin: linhas da tabela `public.admins` (`user_id`). Restaurantes ficam em `perfis_restaurante` e só veem as próprias avaliações. Conta nova sem linha em nenhuma dessas tabelas (nem em `colaboradores`) não acessa nada.
+- Colaboradores (equipe interna, acesso operacional restrito): linhas da tabela `public.colaboradores` (`user_id`). Colaborador acessa Avaliações (leitura total + sugestão do dia), Leads (ler/criar/atualizar, sem excluir), Instalação e Documentos (upload/download/exclusão, igual admin) — mas NÃO acessa CRM nem Financeiro (dados de valores/negociação). `crm.html` e `financeiro.html` bloqueiam e redirecionam para `index.html` quem não é admin; as demais páginas do painel só escondem os links de CRM/Financeiro do menu para colaboradores. Adicionar colaborador: `insert into public.colaboradores (user_id, nome) values ('<uuid>', 'Nome');` (a API não escreve nessa tabela — pedir para o Claude cadastrar quando precisar de um novo).
 - Antes (até 19/09/2026) valia "quem não é restaurante é admin", que liberaria qualquer conta nova. Não voltar a esse padrão em tabelas novas.
 - Adicionar admin: `insert into public.admins (user_id) values ('<uuid>');` (a API não escreve nessa tabela).
 - Tabela nova em `public`: o gatilho `ensure_rls` liga o RLS sozinho, mas é preciso criar as políticas (sem política, ninguém acessa).

@@ -950,8 +950,19 @@ async function redirecionarSeRestaurante(){
   return false;
 }
 
+async function aplicarRestricaoColaborador(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return;
+  const { data: admin } = await sb.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
+  if(admin) return;
+  const { data: colaborador } = await sb.from('colaboradores').select('user_id').eq('user_id', user.id).maybeSingle();
+  if(!colaborador) return;
+  document.querySelectorAll('.nav-links a[href="crm.html"], .nav-links a[href="financeiro.html"]').forEach(function(el){ el.remove(); });
+}
+
 async function mostrarApp(){
   if(await redirecionarSeRestaurante()) return;
+  await aplicarRestricaoColaborador();
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('app').classList.add('show');
   carregarLeads();
