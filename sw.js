@@ -1,4 +1,4 @@
-const CACHE_NAME = 'painel-ad-v3';
+const CACHE_NAME = 'painel-ad-v4';
 
 const PRECACHE_URLS = [
   './index.html',
@@ -6,6 +6,7 @@ const PRECACHE_URLS = [
   './financeiro.html',
   './leads.html',
   './documentos.html',
+  './manual.html',
   './manifest.json',
   './assets/images/icon-192.png',
   './assets/images/icon-512.png',
@@ -19,7 +20,7 @@ const PRECACHE_URLS = [
 // Só o painel administrativo faz parte deste PWA — as páginas públicas
 // (avaliar.html, portais dos restaurantes) ficam de fora do cache para
 // nunca servir uma versão desatualizada para clientes/convidados.
-const ADMIN_PATHS = ['/', '/index.html', '/crm.html', '/financeiro.html', '/leads.html', '/documentos.html', '/manifest.json'];
+const ADMIN_PATHS = ['/', '/index.html', '/crm.html', '/financeiro.html', '/leads.html', '/documentos.html', '/manual.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

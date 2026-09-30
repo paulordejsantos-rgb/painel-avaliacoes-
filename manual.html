@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual — A Casa & Designer</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="icon" href="assets/images/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="assets/images/favicon-64.png" sizes="64x64" type="image/png">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Painel A&D">
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:360px;}
+  .login-box h1{font-size:20px;color:var(--gold);margin:0 0 4px;text-align:center;}
+  .login-box p{font-size:13px;color:var(--muted);margin:0 0 24px;text-align:center;}
+  .login-box input{width:100%;padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:14px;}
+  .login-box button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;}
+  .login-box button:disabled{opacity:0.5;cursor:not-allowed;}
+  .login-err{color:#e35b5b;font-size:13px;margin-top:10px;text-align:center;min-height:16px;}
+
+  .app{display:none;}
+  .app.show{display:block;}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
+  header.top h1{font-size:18px;color:var(--gold);margin:0;}
+  header.top .nav-links{display:flex;gap:14px;font-size:13px;flex-wrap:wrap;}
+  header.top .nav-links a{color:var(--muted);text-decoration:none;}
+  header.top .nav-links a:hover{color:var(--txt);}
+  header.top .nav-links a.active{color:var(--gold);font-weight:700;}
+  header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+
+  .main{max-width:900px;margin:0 auto;padding:28px 20px 60px;}
+  .main-intro{margin:0 0 26px;}
+  .main-intro h2{font-size:22px;margin:0 0 6px;color:var(--txt);}
+  .main-intro p{font-size:13px;color:var(--muted);margin:0;}
+
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:32px;}
+  .toc a{font-size:12px;color:var(--gold);text-decoration:none;border:1px solid var(--border);padding:8px 12px;border-radius:20px;background:rgba(201,168,76,0.06);}
+  .toc a:hover{border-color:var(--gold);}
+
+  .sec{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px 24px;margin-bottom:18px;scroll-margin-top:80px;}
+  .sec-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .sec-icon{width:38px;height:38px;border-radius:11px;background:rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .sec h3{font-size:16px;margin:0;color:var(--gold);}
+  .sec .tag{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;}
+  .sec p{font-size:14px;line-height:1.6;color:var(--txt);margin:0 0 10px;}
+  .sec ul{margin:0 0 10px;padding-left:20px;}
+  .sec li{font-size:14px;line-height:1.7;color:var(--txt);margin-bottom:4px;}
+  .sec .quem{display:inline-block;font-size:11px;color:#000;background:var(--gold);padding:3px 10px;border-radius:12px;font-weight:700;margin-bottom:12px;}
+  .sec .nota{font-size:12.5px;color:var(--muted);border-left:2px solid var(--border);padding-left:12px;margin-top:12px;}
+  .sec code{background:#000;border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--gold);}
+
+  h2.grupo{font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin:34px 0 12px;}
+  h2.grupo:first-of-type{margin-top:0;}
+</style>
+</head>
+<body>
+
+  <div class="login-wrap" id="login-wrap">
+    <div class="login-box">
+      <h1>Manual</h1>
+      <p>A Casa & Designer</p>
+      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+      <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+      <button id="login-btn" onclick="fazerLogin()">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="top">
+      <h1>📖 Manual</h1>
+      <div class="nav-links">
+        <a href="index.html">Avaliações</a>
+        <a href="crm.html">CRM</a>
+        <a href="financeiro.html">Financeiro</a>
+        <a href="leads.html">Leads</a>
+        <a href="instalacao.html">Instalação</a>
+        <a href="documentos.html">Documentos</a>
+        <a href="central.html">Central</a>
+        <a href="manual.html" class="active">Manual</a>
+      </div>
+      <button onclick="fazerLogout()">Sair</button>
+    </header>
+
+    <div class="main">
+      <div class="main-intro">
+        <h2>Como o sistema funciona</h2>
+        <p>Guia de referência para quem for ajudar a tocar a A Casa & Designer — o que cada tela faz, quem acessa e de onde vêm os dados. Escrito para quem está vendo isso pela primeira vez.</p>
+      </div>
+
+      <div class="toc">
+        <a href="#visao-geral">Visão geral</a>
+        <a href="#avaliacoes">Avaliações</a>
+        <a href="#crm">CRM</a>
+        <a href="#financeiro">Financeiro</a>
+        <a href="#leads">Leads</a>
+        <a href="#instalacao">Instalação</a>
+        <a href="#documentos">Documentos</a>
+        <a href="#central">Central</a>
+        <a href="#portal-restaurante">Portal do restaurante</a>
+        <a href="#avaliar">Avaliar (pública)</a>
+        <a href="#proposta">Proposta comercial</a>
+        <a href="#cardapios">Cardápios digitais</a>
+      </div>
+
+      <h2 class="grupo">Como tudo se encaixa</h2>
+
+      <div class="sec" id="visao-geral">
+        <div class="sec-head">
+          <div class="sec-icon">🧩</div>
+          <div>
+            <h3>Visão geral do sistema</h3>
+            <span class="tag">Leitura obrigatória antes do resto</span>
+          </div>
+        </div>
+        <p>A Casa & Designer vende o <strong>ACD — Cardápio Digital Inclusivo</strong>: cada restaurante cliente ganha um cardápio digital acessível (o "cardápio público") e o Paulo administra tudo — avaliações, contratos, cobranças, leads e instalação — por um painel único, o <strong>Painel A&D</strong>.</p>
+        <p>O painel é um site (sem "aplicativo" de verdade) com uma página <code>.html</code> por assunto: <code>index.html</code> (Avaliações), <code>crm.html</code>, <code>financeiro.html</code>, <code>leads.html</code>, <code>instalacao.html</code>, <code>documentos.html</code>, <code>central.html</code> e este <code>manual.html</code>. Todas compartilham o mesmo login e o mesmo menu no topo.</p>
+        <p>Por trás de tudo está o <strong>Supabase</strong> (banco de dados + login). Existem dois tipos de conta:</p>
+        <ul>
+          <li><strong>Administrador</strong> (o Paulo, e quem mais for cadastrado como admin) — vê e mexe em tudo: todos os restaurantes, CRM, financeiro, leads, instalação e documentos.</li>
+          <li><strong>Restaurante</strong> (o cliente) — só enxerga o que é dele: as próprias avaliações e os próprios documentos, num painel reduzido (veja "Portal do restaurante" abaixo).</li>
+        </ul>
+        <p>Uma conta nova, por padrão, <strong>não vê nada</strong> até ser explicitamente marcada como admin ou vinculada a um restaurante — isso é proposital, é a trava de segurança do sistema.</p>
+        <div class="nota">Detalhe técnico para quem for mexer no código: essa separação é feita por Row Level Security (RLS) no Supabase — cada tabela tem regras próprias de quem pode ler/escrever o quê. Não é o login que protege os dados, é o RLS.</div>
+      </div>
+
+      <h2 class="grupo">Abas do Painel A&D (uso do administrador)</h2>
+
+      <div class="sec" id="avaliacoes">
+        <div class="sec-head">
+          <div class="sec-icon">⭐</div>
+          <div><h3>Avaliações</h3><span class="tag">index.html</span></div>
+        </div>
+        <span class="quem">Admin</span>
+        <p>Tela inicial do painel. Mostra todas as avaliações que os clientes finais deixaram em cada restaurante — nota do cardápio digital, nota do ambiente/estabelecimento e a sugestão escrita, agrupadas por restaurante (A→Z) e da mais recente para a mais antiga.</p>
+        <ul>
+          <li>Cards no topo mostram o total de avaliações e as médias gerais.</li>
+          <li>Filtro por restaurante e por tipo de avaliação (cardápio digital ou estabelecimento).</li>
+          <li>"Sugestão do Dia" destaca um comentário para inspirar melhorias.</li>
+        </ul>
+        <p>Essas avaliações vêm do botão "⭐ Avaliar" que aparece no rodapé do cardápio digital de cada restaurante (veja "Cardápios digitais" abaixo) ou da página pública <code>avaliar.html</code>.</p>
+      </div>
+
+      <div class="sec" id="crm">
+        <div class="sec-head">
+          <div class="sec-icon">📇</div>
+          <div><h3>CRM</h3><span class="tag">crm.html</span></div>
+        </div>
+        <span class="quem">Admin</span>
+        <p>Funil de vendas: cada contato (restaurante em prospecção) passa por estágios — <em>novo lead → contato feito → proposta enviada → contrato assinado → cliente ativo</em> (ou <em>inativo</em> / <em>perdido</em>). Para cada contato dá para registrar interações (ligações, conversas) e ver o histórico de mudança de estágio.</p>
+        <p>É o lugar para acompanhar "quem estou tentando fechar" e "quem já é cliente".</p>
+      </div>
+
+      <div class="sec" id="financeiro">
+        <div class="sec-head">
+          <div class="sec-icon">💰</div>
+          <div><h3>Financeiro</h3><span class="tag">financeiro.html</span></div>
+        </div>
+        <span class="quem">Admin</span>
+        <p>Controle de cobranças por cliente: entrada (30%), saldo (70%), mensalidades e cobranças avulsas, cada uma com vencimento e status (pendente, atrasado, pago).</p>
+        <p>Filtra por cliente, status e tipo de cobrança — é o "quem me deve o quê e quando vence".</p>
+      </div>
+
+      <div class="sec" id="leads">
+        <div class="sec-head">
+          <div class="sec-icon">🎯</div>
+          <div><h3>Leads</h3><span class="tag">leads.html</span></div>
+        </div>
+        <span class="quem">Admin</span>
+        <p>Lista de restaurantes interessados que ainda não são contatos formais no CRM — normalmente vindos do site institucional. Guarda nome do contato, WhatsApp, cidade/estado, plano de interesse e status (novo, contatado, proposta enviada etc.).</p>
+        <p>Também guarda o link de pagamento (Mercado Pago) gerado para o lead e um checklist de instalação, que alimenta a aba Instalação.</p>
+        <p>Botão "+ Novo Lead" cadastra manualmente (ex.: alguém que ligou ou mandou mensagem direto).</p>
+      </div>
+
+      <div class="sec" id="instalacao">
+        <div class="sec-head">
+          <div class="sec-icon">🔧</div>
+          <div><h3>Instalação</h3><span class="tag">instalacao.html</span></div>
+        </div>
+        <span class="quem">Admin</span>
+        <p>Acompanha o progresso de implantação do cardápio digital em cada cliente fechado: <em>não iniciado</em>, <em>em andamento</em> ou <em>concluído</em>. A instalação é 100% remota — não exige visita presencial nem custo extra para o cliente.</p>
+      </div>
+
+      <div class="sec" id="documentos">
+        <div class="sec-head">
+          <div class="sec-icon">📁</div>
+          <div><h3>Documentos</h3><span class="tag">documentos.html</span></div>
+        </div>
+        <span class="quem">Admin (upload/exclusão) · Restaurante (leitura, na própria aba do portal)</span>
+        <p>Repositório central de arquivos: contratos/propostas assinadas, manuais de instalação/operação, materiais comerciais/marketing e instaladores/arquivos técnicos.</p>
+        <ul>
+          <li>Cada arquivo é enviado escolhendo um restaurante (ou "Geral", para algo que não é de um cliente específico — instaladores e material comercial normalmente são Geral) e uma categoria.</li>
+          <li>A lista fica agrupada por restaurante, mais recente primeiro, com botões Baixar e Excluir.</li>
+          <li>Os arquivos ficam guardados de forma privada (não são links públicos) — o botão Baixar gera um link temporário só na hora do clique.</li>
+        </ul>
+        <p>Cada restaurante também vê os próprios documentos (só leitura) dentro do próprio portal — veja "Portal do restaurante".</p>
+      </div>
+
+      <div class="sec" id="central">
+        <div class="sec-head">
+          <div class="sec-icon">🧭</div>
+          <div><h3>Central</h3><span class="tag">central.html</span></div>
+        </div>
+        <span class="quem">Admin</span>
+        <p>Página de atalhos — não tem dado próprio. Reúne links rápidos para o site institucional, o painel de Leads, e-mail (webmail Hostinger), WhatsApp Web, o blog e o painel de hospedagem (Nuven.pro). É a "página inicial" para não precisar guardar vários favoritos soltos no navegador.</p>
+      </div>
+
+      <h2 class="grupo">O que o cliente (restaurante) vê</h2>
+
+      <div class="sec" id="portal-restaurante">
+        <div class="sec-head">
+          <div class="sec-icon">🏠</div>
+          <div><h3>Portal do restaurante</h3><span class="tag">pizzaria-premium/, burger-foundry/, bistro-elegante/, peso-e-sabor/</span></div>
+        </div>
+        <span class="quem">Restaurante (cliente)</span>
+        <p>Cada restaurante cliente tem seu próprio login (e-mail e senha), diferente do login de admin. Ao entrar, cai numa versão enxuta do painel, só com o que é dele:</p>
+        <ul>
+          <li><strong>Avaliações</strong> — só as avaliações do próprio restaurante.</li>
+          <li><strong>Documentos</strong> — só os próprios documentos, em modo leitura (sem enviar ou excluir).</li>
+        </ul>
+        <p>O endereço é <code>/&lt;nome-do-restaurante&gt;/</code> dentro do próprio Painel A&D (ex.: <code>painel-avaliacoes-one.vercel.app/bistro-elegante/</code>) — importante não confundir com o cardápio digital público do restaurante, que é um site separado (veja abaixo).</p>
+        <div class="nota">Login e senha de cada restaurante são cadastrados manualmente pelo admin no Supabase; o cliente não se cadastra sozinho.</div>
+      </div>
+
+      <h2 class="grupo">Páginas públicas (sem login)</h2>
+
+      <div class="sec" id="avaliar">
+        <div class="sec-head">
+          <div class="sec-icon">💬</div>
+          <div><h3>Avalie sua experiência</h3><span class="tag">avaliar.html</span></div>
+        </div>
+        <span class="quem">Cliente final do restaurante (sem login)</span>
+        <p>Formulário público de avaliação (estrelas + comentário) usado como alternativa ao botão "Avaliar" embutido no cardápio digital. Depois de enviada, a avaliação aparece na aba Avaliações do admin e no portal daquele restaurante.</p>
+      </div>
+
+      <div class="sec" id="proposta">
+        <div class="sec-head">
+          <div class="sec-icon">📄</div>
+          <div><h3>Proposta comercial</h3><span class="tag">proposta.html</span></div>
+        </div>
+        <span class="quem">Lead/prospect (sem login, com trava de telefone)</span>
+        <p>Página enviada para um lead com a proposta de planos e valores. Antes de mostrar qualquer coisa, pede para o lead confirmar o telefone (assim o link só faz sentido para quem realmente recebeu ele) — isso é diferente do login do painel, é só uma confirmação simples.</p>
+        <p>Depois de confirmado, mostra os planos e, ao escolher um, gera QR Code e link de pagamento (Mercado Pago) para a entrada.</p>
+      </div>
+
+      <div class="sec" id="cardapios">
+        <div class="sec-head">
+          <div class="sec-icon">🍽️</div>
+          <div><h3>Cardápios digitais (demos dos restaurantes)</h3><span class="tag">Pizzaria Premium · The Burger Foundry · Bistrô Elegante · Peso & Sabor</span></div>
+        </div>
+        <span class="quem">Cliente final do restaurante (sem login) — este é o produto ACD em si</span>
+        <p>É o cardápio digital acessível que o cliente final vê na mesa: pratos, fotos, filtros (sem glúten, sem lactose, vegano), alto contraste, narração por voz, "Sugestão do Chefe do Dia" e o botão "⭐ Avaliar" que envia a avaliação (nota do cardápio digital + nota do ambiente/estabelecimento) direto para o Painel A&D.</p>
+        <p>Cada um desses quatro é hospedado como um site independente (fora do Painel A&D), num projeto próprio na Vercel — são as demonstrações usadas para vender o ACD, mas seguem o mesmo funcionamento que um cliente real teria.</p>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function fazerLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if(!email || !senha){ err.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+  if(error){ err.textContent = 'E-mail ou senha inválidos.'; return; }
+  mostrarApp();
+}
+
+async function fazerLogout(){
+  await sb.auth.signOut();
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-wrap').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-senha').value = '';
+}
+
+const SLUG_POR_RESTAURANTE = {
+  'Pizzaria Premium': 'pizzaria-premium',
+  'The Burger Foundry': 'burger-foundry',
+  'Bistrô Elegante': 'bistro-elegante',
+  'Peso & Sabor': 'peso-e-sabor'
+};
+
+async function redirecionarSeRestaurante(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return false;
+  const { data } = await sb.from('perfis_restaurante').select('restaurante').eq('user_id', user.id).maybeSingle();
+  if(data && data.restaurante && SLUG_POR_RESTAURANTE[data.restaurante]){
+    window.location.href = '/' + SLUG_POR_RESTAURANTE[data.restaurante] + '/';
+    return true;
+  }
+  return false;
+}
+
+async function mostrarApp(){
+  if(await redirecionarSeRestaurante()) return;
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+}
+
+(async function init(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ mostrarApp(); }
+})();
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if(e.key === 'Enter') fazerLogin();
+});
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(err){
+      console.warn('Falha ao registrar service worker:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>

@@ -21,6 +21,10 @@ Painel administrativo estático (HTML + Supabase, hospedado na Vercel). Cada aba
 - Portal de cada restaurante (`pizzaria-premium/index.html` etc., os 4 são idênticos) ganhou uma segunda aba interna "Documentos" (troca de seção via JS, sem sair da página) só de leitura/download — upload e exclusão só existem em `documentos.html` (admin).
 - Download usa `createSignedUrl` (link temporário de 60s) — nunca URL pública direta.
 
+## Aba Manual (`manual.html`)
+- Página de referência (só leitura, sem banco) explicando o funcionamento de cada tela/link do sistema, para futuros colaboradores. Índice com âncoras + uma seção por página (Avaliações, CRM, Financeiro, Leads, Instalação, Documentos, Central, Portal do restaurante, Avaliar, Proposta, Cardápios digitais).
+- Ao adicionar uma tela nova ao painel, adicionar também uma seção aqui e no índice (`.toc`).
+
 ## Login unificado
 - Todas as abas do painel usam só o login Supabase (e-mail + senha); a sessão é compartilhada entre as páginas. A antiga tela "Acesso restrito" (senha por hash no navegador) da aba Leads foi removida — não recriar: era só uma trava de tela, não protegia os dados. A proteção real dos dados é o RLS (seção abaixo).
 - O gate de `proposta.html` (confirmar telefone do cliente) é outra coisa e permanece.
@@ -37,4 +41,4 @@ Painel administrativo estático (HTML + Supabase, hospedado na Vercel). Cada aba
 O login usa Supabase Auth. Para ver a tela localmente: `python -m http.server`, abrir a página, esconder `#login-wrap`, mostrar `#app`, chamar `montarFiltroRestaurantes()` e preencher `todasAvaliacoes` com dados de exemplo + `aplicarFiltros()`.
 
 ## Armadilha: service worker
-`sw.js` usa cache "stale-while-revalidate" nas páginas admin. Após editar uma página, o navegador pode mostrar a versão antiga uma vez. Em testes, desregistre o SW e limpe o cache. Ao mudar muito, suba `CACHE_NAME` (hoje `painel-ad-v2`); o pré-cache já usa `cache:'reload'` para não pegar cópia velha do cache HTTP. Observação: `central.html` e `instalacao.html` não estão em `PRECACHE_URLS`/`ADMIN_PATHS`.
+`sw.js` usa cache "stale-while-revalidate" nas páginas admin. Após editar uma página, o navegador pode mostrar a versão antiga uma vez. Em testes, desregistre o SW e limpe o cache. Ao mudar muito, suba `CACHE_NAME` (hoje `painel-ad-v4`); o pré-cache já usa `cache:'reload'` para não pegar cópia velha do cache HTTP. Observação: `central.html` e `instalacao.html` não estão em `PRECACHE_URLS`/`ADMIN_PATHS`.
