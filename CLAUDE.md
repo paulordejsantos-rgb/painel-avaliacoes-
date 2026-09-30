@@ -25,6 +25,13 @@ Painel administrativo estático (HTML + Supabase, hospedado na Vercel). Cada aba
 - Página de referência (só leitura, sem banco) explicando o funcionamento de cada tela/link do sistema, para futuros colaboradores. Índice com âncoras + uma seção por página (Avaliações, CRM, Financeiro, Leads, Instalação, Documentos, Central, Portal do restaurante, Avaliar, Proposta, Cardápios digitais).
 - Ao adicionar uma tela nova ao painel, adicionar também uma seção aqui e no índice (`.toc`).
 
+## Vitrine pública de avaliações (`avaliacoes-publicas.html`)
+- Página pública (sem login), pensada para linkar a partir do site institucional/página de planos, como prova social para leads.
+- Mostra nota média (cardápio digital + ambiente/atendimento) e total de avaliações por restaurante, e uma seção de depoimentos com os comentários marcados como destaque.
+- Não expõe comentários por padrão — só os que o admin/colaborador marcam com o botão "☆ Destacar" na tabela da aba Avaliações (`index.html`), coluna "Destaque". Campo `avaliacoes.destaque` (boolean).
+- Lê os dados por duas funções SQL `security definer` (`public.avaliacoes_resumo_publico()` e `public.avaliacoes_destaques_publico()`), liberadas para `anon` — assim a página não precisa de login e, ao mesmo tempo, nunca expõe comentários não destacados nem dados fora do agregado. O advisor de segurança do Supabase acusa isso como aviso (`anon_security_definer_function_executable`) — é esperado e intencional, não corrigir.
+- Fora do cache do PWA (`sw.js`) — é pública, igual `avaliar.html`/`proposta.html`/portais dos restaurantes.
+
 ## Login unificado
 - Todas as abas do painel usam só o login Supabase (e-mail + senha); a sessão é compartilhada entre as páginas. A antiga tela "Acesso restrito" (senha por hash no navegador) da aba Leads foi removida — não recriar: era só uma trava de tela, não protegia os dados. A proteção real dos dados é o RLS (seção abaixo).
 - O gate de `proposta.html` (confirmar telefone do cliente) é outra coisa e permanece.

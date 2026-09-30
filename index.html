@@ -104,6 +104,9 @@
   .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
   .tag-digital{background:rgba(201,168,76,0.15);color:var(--gold);}
   .tag-estab{background:rgba(90,150,220,0.15);color:#7ab0e8;}
+  .btn-destaque{border:1px solid var(--border);background:transparent;color:var(--muted);padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color .15s ease,color .15s ease;}
+  .btn-destaque:hover{border-color:var(--gold);color:var(--gold);}
+  .btn-destaque.ativo{background:rgba(201,168,76,0.15);border-color:var(--gold);color:var(--gold);}
   .nota-line{display:flex;align-items:center;gap:8px;line-height:1.7;}
   .nota-line .k{font-size:11px;color:var(--muted);min-width:64px;}
   .sugestao{color:var(--txt);max-width:320px;line-height:1.5;}
@@ -357,6 +360,7 @@ function renderTabela(lista){
       }
       const tagClass = a.tipo === 'cardapio_digital' ? 'tag-digital' : 'tag-estab';
       const tagLabel = a.tipo === 'cardapio_digital' ? 'Cardápio digital' : 'Estabelecimento';
+      const destacado = !!a.destaque;
       return `
         <tr class="item">
           <td class="muted" data-label="Data">${formatarData(a.created_at)}</td>
@@ -364,9 +368,10 @@ function renderTabela(lista){
           <td data-label="Tipo"><span class="tag ${tagClass}">${tagLabel}</span></td>
           <td data-label="Notas">${notasCol}</td>
           <td class="sugestao" data-label="Sugestão">${a.sugestao ? esc(a.sugestao) : '<span class="muted">—</span>'}</td>
+          <td data-label="Destaque"><button class="btn-destaque ${destacado ? 'ativo' : ''}" onclick="alternarDestaque('${a.id}', ${destacado})">${destacado ? '★ Destacado' : '☆ Destacar'}</button></td>
         </tr>`;
     }).join('');
-    return `<tr class="grp"><td colspan="5"><div class="grp-in"><span class="grp-name">${esc(g.nome)}</span><span class="grp-meta">${plural(g.itens.length, 'avaliação', 'avaliações')}</span></div></td></tr>${linhas}`;
+    return `<tr class="grp"><td colspan="6"><div class="grp-in"><span class="grp-name">${esc(g.nome)}</span><span class="grp-meta">${plural(g.itens.length, 'avaliação', 'avaliações')}</span></div></td></tr>${linhas}`;
   }).join('');
 
   container.innerHTML = `
@@ -378,11 +383,24 @@ function renderTabela(lista){
           <th>Tipo</th>
           <th>Notas</th>
           <th>Sugestão</th>
+          <th>Destaque</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
   `;
+}
+
+async function alternarDestaque(id, estavaDestacado){
+  const novoValor = !estavaDestacado;
+  const { error } = await sb.from('avaliacoes').update({ destaque: novoValor }).eq('id', id);
+  if(error){
+    alert('Erro ao atualizar destaque: ' + error.message);
+    return;
+  }
+  const item = todasAvaliacoes.find(a => a.id === id);
+  if(item) item.destaque = novoValor;
+  aplicarFiltros();
 }
 
 function montarFiltroRestaurantes(){

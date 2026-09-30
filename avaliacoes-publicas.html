@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avaliações reais — A Casa & Designer</title>
+<meta name="theme-color" content="#0d0d0d">
+<link rel="icon" href="assets/images/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="assets/images/favicon-64.png" sizes="64x64" type="image/png">
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  header.top{padding:32px 20px 8px;text-align:center;}
+  header.top .marca{font-size:14px;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:10px;}
+  header.top h1{font-size:26px;margin:0 0 8px;color:var(--txt);}
+  header.top p{font-size:14px;color:var(--muted);margin:0;max-width:520px;margin:0 auto;}
+
+  .main{max-width:960px;margin:0 auto;padding:28px 20px 70px;}
+
+  .stars{white-space:nowrap;letter-spacing:1px;color:var(--gold);font-size:15px;}
+  .stars .off{color:#3a3a3a;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:40px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;transition:border-color .15s ease;}
+  .card:hover{border-color:rgba(201,168,76,0.4);}
+  .card h3{font-size:15px;margin:0 0 12px;color:var(--txt);}
+  .card .linha{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .card .linha:last-of-type{margin-bottom:0;}
+  .card .total{margin-top:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;}
+
+  h2.grupo{font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin:0 0 16px;}
+
+  .depoimentos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
+  .depo{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:10px;}
+  .depo .rest{font-size:13px;font-weight:700;color:var(--gold);}
+  .depo .texto{font-size:14px;line-height:1.6;color:var(--txt);}
+  .depo .texto::before{content:"\201C";}
+  .depo .texto::after{content:"\201D";}
+
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 0;}
+  .loading{text-align:center;color:var(--muted);font-size:13px;padding:40px 0;}
+
+  .rodape{text-align:center;margin-top:50px;font-size:12px;color:var(--muted);}
+  .rodape a{color:var(--gold);text-decoration:none;}
+</style>
+</head>
+<body>
+
+  <header class="top">
+    <div class="marca">A Casa & Designer</div>
+    <h1>O que os clientes dizem</h1>
+    <p>Avaliações reais, enviadas direto pelo cardápio digital dos restaurantes que já usam o ACD.</p>
+  </header>
+
+  <div class="main">
+    <h2 class="grupo">Nota média por restaurante</h2>
+    <div id="resumo-container" class="grid"><div class="loading">Carregando...</div></div>
+
+    <h2 class="grupo">Depoimentos</h2>
+    <div id="depoimentos-container" class="depoimentos"><div class="loading">Carregando...</div></div>
+
+    <div class="rodape">Quer um sistema assim no seu restaurante? <a href="https://acasaedesigner.com/cardapio-inclusivo-acd" target="_blank" rel="noopener">Conheça o ACD</a></div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const RESTAURANTES = ['Pizzaria Premium', 'The Burger Foundry', 'Bistrô Elegante', 'Peso & Sabor']
+  .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+function esc(s){
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+function estrelasHtml(nota){
+  nota = Math.round(Number(nota) || 0);
+  let html = '';
+  for(let i = 1; i <= 5; i++){
+    html += i <= nota ? '★' : '<span class="off">★</span>';
+  }
+  return '<span class="stars">' + html + '</span>';
+}
+
+function formatarData(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR');
+}
+
+async function carregarResumo(){
+  const container = document.getElementById('resumo-container');
+  const { data, error } = await sb.rpc('avaliacoes_resumo_publico');
+  if(error){
+    container.innerHTML = '<div class="empty">Não foi possível carregar as notas agora.</div>';
+    return;
+  }
+  const porRestaurante = {};
+  (data || []).forEach(r => { porRestaurante[r.restaurante] = r; });
+
+  const comDados = RESTAURANTES.filter(nome => porRestaurante[nome] && porRestaurante[nome].total > 0);
+  if(comDados.length === 0){
+    container.innerHTML = '<div class="empty">Ainda não há avaliações suficientes para mostrar.</div>';
+    return;
+  }
+
+  container.innerHTML = comDados.map(nome => {
+    const r = porRestaurante[nome];
+    return `
+      <div class="card">
+        <h3>${esc(nome)}</h3>
+        <div class="linha"><span>Cardápio digital</span>${estrelasHtml(r.media_cardapio)}</div>
+        <div class="linha"><span>Ambiente / Atendimento</span>${estrelasHtml(r.media_estabelecimento)}</div>
+        <div class="total">${r.total} ${r.total == 1 ? 'avaliação' : 'avaliações'}</div>
+      </div>`;
+  }).join('');
+}
+
+async function carregarDepoimentos(){
+  const container = document.getElementById('depoimentos-container');
+  const { data, error } = await sb.rpc('avaliacoes_destaques_publico');
+  if(error){
+    container.innerHTML = '<div class="empty">Não foi possível carregar os depoimentos agora.</div>';
+    return;
+  }
+  if(!data || data.length === 0){
+    container.innerHTML = '<div class="empty">Em breve, depoimentos selecionados de clientes reais.</div>';
+    return;
+  }
+  container.innerHTML = data.map(d => `
+    <div class="depo">
+      <div class="rest">${esc(d.restaurante)}</div>
+      ${estrelasHtml(d.tipo === 'cardapio_digital' ? d.nota_digital : d.nota_estabelecimento)}
+      <div class="texto">${esc(d.sugestao)}</div>
+    </div>`).join('');
+}
+
+carregarResumo();
+carregarDepoimentos();
+</script>
+</body>
+</html>
