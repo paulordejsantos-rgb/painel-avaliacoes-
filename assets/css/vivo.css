@@ -124,7 +124,7 @@ header.top .nav-links a:hover::after, header.top .nav-links a.active::after { ri
    ============================================================ */
 .a11y-bar {
   position: fixed;
-  right: 16px;
+  left: 16px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 300;
@@ -156,7 +156,7 @@ header.top .nav-links a:hover::after, header.top .nav-links a.active::after { ri
 .a11y-btn:disabled { opacity: .35; cursor: not-allowed; }
 
 @media (max-width: 640px) {
-  .a11y-bar { right: 8px; gap: 6px; }
+  .a11y-bar { left: 8px; gap: 6px; }
   .a11y-btn { width: 34px; height: 34px; font-size: 12px; }
 }
 
@@ -192,14 +192,3 @@ html.a11y-contraste .tab-btn {
 }
 html.a11y-contraste .a11y-btn { background: #fff !important; color: #000 !important; }
 html.a11y-contraste .a11y-btn.ativo { background: #000 !important; color: #fff !important; border-color: #000 !important; }
-
-/* VLibras: o widget oficial nasce grudado do lado direito — como a barra
-   de acessibilidade do painel já ocupa aquele lado, empurra pro esquerdo. */
-div[vw] {
-  position: fixed !important;
-  left: 20px !important;
-  right: auto !important;
-  z-index: 250 !important;
-}
-div[vw] .vw-access-button,
-div[vw] .vw-plugin-wrapper { left: 0 !important; right: auto !important; }
