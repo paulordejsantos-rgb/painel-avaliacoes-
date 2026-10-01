@@ -268,14 +268,21 @@ async function baixarDocumento(storagePath, nomeArquivo){
   a.remove();
 }
 
+function comTempoLimite(promessa, ms, mensagem){
+  return Promise.race([
+    promessa,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(mensagem)), ms))
+  ]);
+}
+
 function carregarScript(src){
-  return new Promise((resolve, reject) => {
+  return comTempoLimite(new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = src;
     script.onload = resolve;
     script.onerror = () => reject(new Error('Não foi possível carregar o visualizador de Word.'));
     document.body.appendChild(script);
-  });
+  }), 12000, 'Tempo esgotado ao carregar o visualizador de Word.');
 }
 
 let docxPreviewCarregado = false;
@@ -313,13 +320,16 @@ async function visualizarDocumento(storagePath, nomeArquivo){
   if(ext === 'docx'){
     try{
       await carregarDocxPreview();
-      const resp = await fetch(data.signedUrl);
-      if(!resp.ok) throw new Error('Falha ao baixar o arquivo para visualização.');
+      const resp = await comTempoLimite(fetch(data.signedUrl), 15000, 'Tempo esgotado ao baixar o arquivo para visualização.');
+      if(!resp.ok) throw new Error('Falha ao baixar o arquivo para visualização (' + resp.status + ').');
       const blob = await resp.blob();
       corpo.innerHTML = '<div class="docx-render-wrap" id="docx-render-alvo"></div>';
-      await window.docx.renderAsync(blob, document.getElementById('docx-render-alvo'), undefined, {
-        inWrapper: false, ignoreWidth: false, ignoreHeight: true
-      });
+      await comTempoLimite(
+        window.docx.renderAsync(blob, document.getElementById('docx-render-alvo'), undefined, {
+          inWrapper: false, ignoreWidth: false, ignoreHeight: true
+        }),
+        15000, 'Tempo esgotado ao desenhar o documento.'
+      );
     }catch(e){
       mostrarPreviewMsg('Não foi possível pré-visualizar este arquivo (' + e.message + '). Use "Baixar" para abri-lo.', true);
     }
