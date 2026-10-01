@@ -101,4 +101,132 @@
 
   window.vivoCountUp = vivoCountUp;
   window.vivoAnimateStats = vivoAnimateStats;
+
+  // ---- Barra de acessibilidade (fonte, contraste, narração, rolagem) ----
+  //
+  // Preferências ficam salvas (localStorage) e valem pra todo o painel,
+  // então navegar de uma aba pra outra mantém a fonte/contraste
+  // escolhidos e, se a narração estiver ligada, a página nova já
+  // começa a ser lida sozinha.
+  var FONT_STEPS = [0.9, 1, 1.1, 1.25]; // A-, normal, A+, A++
+  var FONT_KEY = 'a11y_font_step';
+  var CONTRASTE_KEY = 'a11y_contraste';
+  var NARRACAO_KEY = 'a11y_narracao';
+
+  function getFontStep() {
+    var v = parseInt(localStorage.getItem(FONT_KEY), 10);
+    if (isNaN(v) || v < 0 || v >= FONT_STEPS.length) return 1;
+    return v;
+  }
+  function aplicarFonte(step) {
+    if ('zoom' in document.documentElement.style) {
+      document.documentElement.style.zoom = FONT_STEPS[step];
+    }
+  }
+  function aplicarContraste(ligado) {
+    document.documentElement.classList.toggle('a11y-contraste', ligado);
+  }
+
+  function pegarTextoPagina() {
+    var raiz = document.querySelector('main') || document.body;
+    var clone = raiz.cloneNode(true);
+    var ignorar = clone.querySelectorAll('.a11y-bar, script, style, noscript');
+    ignorar.forEach(function (el) { el.remove(); });
+    return (clone.innerText || clone.textContent || '').trim();
+  }
+
+  function falarPagina() {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var texto = pegarTextoPagina();
+    if (!texto) return;
+    var trechos = (document.title + '. ' + texto)
+      .split(/\n+/)
+      .map(function (t) { return t.trim(); })
+      .filter(Boolean);
+    trechos.forEach(function (trecho) {
+      var u = new SpeechSynthesisUtterance(trecho);
+      u.lang = 'pt-BR';
+      u.rate = 0.95;
+      window.speechSynthesis.speak(u);
+    });
+  }
+
+  function initA11yBar() {
+    if (document.querySelector('.a11y-bar')) return;
+
+    var temVoz = !!window.speechSynthesis;
+    var fontStep = getFontStep();
+    var contrasteLigado = localStorage.getItem(CONTRASTE_KEY) === '1';
+    var narracaoLigada = temVoz && localStorage.getItem(NARRACAO_KEY) === '1';
+
+    var bar = document.createElement('div');
+    bar.className = 'a11y-bar';
+    bar.innerHTML =
+      '<button type="button" class="a11y-btn" data-a11y="font-menos" title="Diminuir fonte" aria-label="Diminuir fonte">A−</button>' +
+      '<button type="button" class="a11y-btn" data-a11y="font-mais" title="Aumentar fonte" aria-label="Aumentar fonte">A+</button>' +
+      '<button type="button" class="a11y-btn" data-a11y="contraste" title="Alto contraste" aria-label="Alternar alto contraste">◐</button>' +
+      '<button type="button" class="a11y-btn" data-a11y="narracao" title="Ler página em voz alta" aria-label="Ligar ou desligar narração por voz"' +
+        (temVoz ? '' : ' disabled') + '>🔊</button>' +
+      '<button type="button" class="a11y-btn" data-a11y="topo" title="Ir para o topo" aria-label="Ir para o topo">↑</button>' +
+      '<button type="button" class="a11y-btn" data-a11y="final" title="Ir para o final" aria-label="Ir para o final">↓</button>';
+    document.body.appendChild(bar);
+
+    var btnContraste = bar.querySelector('[data-a11y="contraste"]');
+    var btnNarracao = bar.querySelector('[data-a11y="narracao"]');
+
+    aplicarFonte(fontStep);
+    aplicarContraste(contrasteLigado);
+    btnContraste.classList.toggle('ativo', contrasteLigado);
+    btnNarracao.classList.toggle('ativo', narracaoLigada);
+    if (narracaoLigada) {
+      // Dá um instante pro conteúdo da página terminar de montar antes de ler.
+      setTimeout(falarPagina, 300);
+    }
+
+    bar.querySelector('[data-a11y="font-menos"]').addEventListener('click', function () {
+      fontStep = Math.max(0, fontStep - 1);
+      localStorage.setItem(FONT_KEY, String(fontStep));
+      aplicarFonte(fontStep);
+    });
+    bar.querySelector('[data-a11y="font-mais"]').addEventListener('click', function () {
+      fontStep = Math.min(FONT_STEPS.length - 1, fontStep + 1);
+      localStorage.setItem(FONT_KEY, String(fontStep));
+      aplicarFonte(fontStep);
+    });
+    btnContraste.addEventListener('click', function () {
+      contrasteLigado = !contrasteLigado;
+      localStorage.setItem(CONTRASTE_KEY, contrasteLigado ? '1' : '0');
+      aplicarContraste(contrasteLigado);
+      btnContraste.classList.toggle('ativo', contrasteLigado);
+    });
+    if (temVoz) {
+      btnNarracao.addEventListener('click', function () {
+        narracaoLigada = !narracaoLigada;
+        localStorage.setItem(NARRACAO_KEY, narracaoLigada ? '1' : '0');
+        btnNarracao.classList.toggle('ativo', narracaoLigada);
+        if (narracaoLigada) {
+          falarPagina();
+        } else {
+          window.speechSynthesis.cancel();
+        }
+      });
+    }
+    bar.querySelector('[data-a11y="topo"]').addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    bar.querySelector('[data-a11y="final"]').addEventListener('click', function () {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initA11yBar);
+  } else {
+    initA11yBar();
+  }
+
+  window.addEventListener('beforeunload', function () {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  });
 })();

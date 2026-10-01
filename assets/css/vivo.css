@@ -116,3 +116,79 @@ header.top .nav-links a:hover::after, header.top .nav-links a.active::after { ri
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+
+/* ============================================================
+   Barra de acessibilidade — ajuste de fonte, alto contraste,
+   narração por voz e atalhos de rolagem. O HTML é montado pelo
+   vivo.js e injetado em todas as telas internas do painel.
+   ============================================================ */
+.a11y-bar {
+  position: fixed;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.a11y-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(201,168,76,.12);
+  color: var(--gold);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition: filter .15s ease, border-color .15s ease, background-color .15s ease, transform .08s ease;
+  box-shadow: 0 4px 12px -6px rgba(0,0,0,.6);
+}
+.a11y-btn:hover { border-color: var(--gold); background: rgba(201,168,76,.22); }
+.a11y-btn:active { transform: scale(.94); }
+.a11y-btn.ativo { background: var(--gold); color: #000; border-color: var(--gold); }
+.a11y-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .a11y-bar { right: 8px; gap: 6px; }
+  .a11y-btn { width: 34px; height: 34px; font-size: 12px; }
+}
+
+/* Alto contraste: sobrescreve a paleta do painel (tudo que usa as
+   variáveis de tema abaixo acompanha automaticamente). */
+html.a11y-contraste {
+  --bg: #ffffff;
+  --card: #ffffff;
+  --border: #000000;
+  --gold: #000000;
+  --txt: #000000;
+  --muted: #333333;
+}
+html.a11y-contraste body { background: #fff; color: #000; }
+html.a11y-contraste header.top.vivo-scrolled { background-color: rgba(255,255,255,.95); }
+html.a11y-contraste input,
+html.a11y-contraste select,
+html.a11y-contraste textarea { background: #fff; color: #000; border: 1px solid #000; }
+/* Botões em geral costumam usar fundo dourado (agora preto) com texto
+   preto fixo no CSS de cada página — sem isso ficariam invisíveis. */
+html.a11y-contraste button,
+html.a11y-contraste .btn-destaque,
+html.a11y-contraste .acao-btn,
+html.a11y-contraste .btn-salvar,
+html.a11y-contraste .btn-cancelar,
+html.a11y-contraste .btn-excluir,
+html.a11y-contraste .btn-novo,
+html.a11y-contraste .hub-link,
+html.a11y-contraste .tab-btn {
+  background: #000 !important;
+  color: #fff !important;
+  border-color: #000 !important;
+}
+html.a11y-contraste .a11y-btn { background: #fff !important; color: #000 !important; }
+html.a11y-contraste .a11y-btn.ativo { background: #000 !important; color: #fff !important; border-color: #000 !important; }
