@@ -1,0 +1,118 @@
+/* ============================================================
+   Camada "vivo" — microinterações e animações compartilhadas
+   entre todas as telas internas do painel (A Casa & Designer).
+
+   Não substitui o <style> de cada página — só adiciona vida em
+   cima do padrão visual já existente (tema escuro + dourado).
+   Importado por: index, crm, financeiro, leads, instalacao,
+   documentos, central, manual.
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+
+  /* Entrada suave dos blocos principais ao carregar a página */
+  .kpi, .stat-card, .panel, .table-wrap, .tabela-wrap, .sugestao-row,
+  .contato-card, .followup-card, .upload-card, .hub-card, .sec,
+  .tempo-card, .relatorio-section, .login-box {
+    animation: vivo-rise .45s cubic-bezier(.16,1,.3,1) both;
+  }
+  .stats > *:nth-child(1), .grid > *:nth-child(1) { animation-delay: 0ms; }
+  .stats > *:nth-child(2), .grid > *:nth-child(2) { animation-delay: 60ms; }
+  .stats > *:nth-child(3), .grid > *:nth-child(3) { animation-delay: 120ms; }
+  .stats > *:nth-child(4), .grid > *:nth-child(4) { animation-delay: 180ms; }
+  .stats > *:nth-child(5), .grid > *:nth-child(5) { animation-delay: 240ms; }
+
+  @keyframes vivo-rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* Linhas de tabela entram em cascata sempre que a lista é (re)desenhada */
+  tbody tr { animation: vivo-rise .35s cubic-bezier(.16,1,.3,1) both; }
+  tbody tr:nth-child(1)  { animation-delay: 0ms;   }
+  tbody tr:nth-child(2)  { animation-delay: 25ms;  }
+  tbody tr:nth-child(3)  { animation-delay: 50ms;  }
+  tbody tr:nth-child(4)  { animation-delay: 75ms;  }
+  tbody tr:nth-child(5)  { animation-delay: 100ms; }
+  tbody tr:nth-child(6)  { animation-delay: 125ms; }
+  tbody tr:nth-child(7)  { animation-delay: 150ms; }
+  tbody tr:nth-child(8)  { animation-delay: 175ms; }
+  tbody tr:nth-child(9)  { animation-delay: 200ms; }
+  tbody tr:nth-child(10) { animation-delay: 225ms; }
+  tbody tr:nth-child(n+11) { animation-delay: 250ms; }
+}
+
+/* Cartões: leve elevação ao passar o mouse, além da borda dourada já existente */
+.kpi, .stat-card, .hub-card, .sugestao-row, .contato-card, .followup-card,
+.upload-card, .tempo-card {
+  transition: border-color .15s ease, transform .2s cubic-bezier(.16,1,.3,1), box-shadow .2s ease;
+}
+.kpi:hover, .stat-card:hover, .hub-card:hover, .sugestao-row:hover,
+.contato-card:hover, .followup-card:hover, .upload-card:hover, .tempo-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px -12px rgba(0,0,0,.5), 0 0 0 1px rgba(201,168,76,.08);
+}
+
+/* Linhas de tabela clicáveis/relevantes: realce com barra dourada à esquerda */
+tbody tr.item, tbody tr.lead-row, tbody tr.checklist-row, tbody tr.cobranca-row {
+  position: relative;
+}
+tbody tr.item::before, tbody tr.lead-row::before, tbody tr.checklist-row::before,
+tbody tr.cobranca-row::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: var(--gold); transform: scaleY(0); transition: transform .15s ease;
+}
+tbody tr.item:hover::before, tbody tr.lead-row:hover::before,
+tbody tr.checklist-row:hover::before, tbody tr.cobranca-row:hover::before {
+  transform: scaleY(1);
+}
+
+/* Botões: feedback de clique consistente em todo o painel */
+button, .btn-destaque, .acao-btn, .btn-salvar, .btn-cancelar, .btn-excluir,
+.btn-novo, .hub-link, .tab-btn {
+  transition: filter .15s ease, border-color .15s ease, color .15s ease,
+              transform .08s ease, box-shadow .15s ease;
+}
+button:active:not(:disabled), .btn-destaque:active, .acao-btn:active,
+.hub-link:active, .btn-salvar:active, .btn-novo:active {
+  transform: scale(.96);
+}
+
+/* Foco visível e mais vivo para quem navega por teclado */
+button:focus-visible, select:focus-visible, input:focus-visible,
+textarea:focus-visible, a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(201,168,76,.35);
+  border-radius: 6px;
+}
+
+/* Cabeçalho: sombra sutil ao rolar a página (classe aplicada por vivo.js) */
+header.top { transition: box-shadow .2s ease, background-color .2s ease; }
+header.top.vivo-scrolled {
+  box-shadow: 0 8px 20px -12px rgba(0,0,0,.6);
+  background-color: rgba(13,13,13,.92);
+  backdrop-filter: blur(6px);
+}
+
+/* Links do menu: sublinhado dourado animado */
+header.top .nav-links a { position: relative; }
+header.top .nav-links a::after {
+  content: ""; position: absolute; left: 0; right: 100%; bottom: -4px; height: 2px;
+  background: var(--gold); transition: right .18s ease;
+}
+header.top .nav-links a:hover::after, header.top .nav-links a.active::after { right: 0; }
+
+/* "Carregando..." pulsa suavemente em vez de ficar estático */
+@media (prefers-reduced-motion: no-preference) {
+  .loading { animation: vivo-pulse 1.4s ease-in-out infinite; }
+  @keyframes vivo-pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+}
+
+/* Barras de progresso / funil: preenchimento sempre animado */
+.bar-fill, .prog-fill, .funil-bar { transition: width .6s cubic-bezier(.16,1,.3,1); }
+
+/* Scrollbar discreta, no mesmo tom do painel (WebKit/Blink) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
