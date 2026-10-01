@@ -267,6 +267,7 @@ function renderStats(){
     <div class="stat-card alerta"><div class="lbl">Em atraso</div><div class="val">${fmtMoeda(emAtraso)}</div></div>
     <div class="stat-card"><div class="lbl">Pipeline total (pendente)</div><div class="val">${fmtMoeda(pipelineTotal)}</div></div>
   `;
+  if(window.vivoAnimateStats) vivoAnimateStats(document.getElementById('stats'));
 }
 
 function renderTabela(){

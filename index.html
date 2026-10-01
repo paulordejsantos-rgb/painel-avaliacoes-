@@ -305,6 +305,7 @@ function renderStats(lista){
       <div class="sub">${starsMedia(mediaEstab) || 'Sem notas ainda'}</div>
     </div>
   `;
+  if(window.vivoAnimateStats) vivoAnimateStats(document.getElementById('stats'));
 }
 
 function barLine(rotulo, m, cls){

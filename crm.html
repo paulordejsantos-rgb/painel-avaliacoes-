@@ -317,6 +317,7 @@ function renderStats(){
     <div class="stat-card"><div class="lbl">Em andamento no funil</div><div class="val">${emAndamento}</div></div>
     <div class="stat-card"><div class="lbl">Valor em pipeline</div><div class="val">${fmtMoeda(valorPipeline)}</div></div>
   `;
+  if(window.vivoAnimateStats) vivoAnimateStats(document.getElementById('stats'));
 }
 
 function renderBoard(){

@@ -421,6 +421,7 @@ function renderStats(){
     <div class="stat-card"><div class="lbl">Valor em propostas</div><div class="val">${fmtMoeda(valorPipeline)}</div></div>
     <div class="stat-card alerta"><div class="lbl">Precisando de atenção</div><div class="val">${precisandoAtencao} lead${precisandoAtencao === 1 ? '' : 's'}</div></div>
   `;
+  if(window.vivoAnimateStats) vivoAnimateStats(document.getElementById('stats'));
 
   atualizarBadgePWA(precisandoAtencao);
 }
