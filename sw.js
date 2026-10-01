@@ -1,4 +1,4 @@
-const CACHE_NAME = 'painel-ad-v10';
+const CACHE_NAME = 'painel-ad-v11';
 
 const PRECACHE_URLS = [
   './index.html',

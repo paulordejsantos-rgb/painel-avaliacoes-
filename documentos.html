@@ -77,6 +77,21 @@
   .muted{color:var(--muted);}
   .empty{padding:40px;text-align:center;color:var(--muted);}
   .loading{padding:40px;text-align:center;color:var(--muted);}
+
+  .preview-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;align-items:center;justify-content:center;padding:20px;}
+  .preview-overlay.show{display:flex;}
+  .preview-box{background:var(--card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:900px;height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+  .preview-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);gap:10px;}
+  .preview-head h3{font-size:14px;margin:0;color:var(--gold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .preview-head .acoes-head{display:flex;gap:8px;flex-shrink:0;}
+  .preview-head button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;}
+  .preview-head button:hover{border-color:var(--gold);color:var(--gold);}
+  .preview-head .fechar:hover{border-color:#e35b5b;color:#e35b5b;}
+  .preview-body{flex:1;overflow:auto;background:#fff;position:relative;}
+  .preview-body iframe{width:100%;height:100%;border:none;display:block;}
+  .preview-body .docx-render-wrap{padding:24px;max-width:760px;margin:0 auto;}
+  .preview-msg{padding:40px 24px;text-align:center;color:#555;background:#fff;height:100%;display:flex;align-items:center;justify-content:center;}
+  .preview-msg.erro{color:#b33;}
 </style>
 <link rel="stylesheet" href="assets/css/vivo.css">
 </head>
@@ -144,6 +159,19 @@
       </div>
 
       <div id="lista-container" class="loading">Carregando...</div>
+    </div>
+  </div>
+
+  <div class="preview-overlay" id="preview-overlay">
+    <div class="preview-box">
+      <div class="preview-head">
+        <h3 id="preview-titulo">Documento</h3>
+        <div class="acoes-head">
+          <button id="preview-baixar">Baixar</button>
+          <button class="fechar" onclick="fecharPreview()">Fechar ✕</button>
+        </div>
+      </div>
+      <div class="preview-body" id="preview-body"></div>
     </div>
   </div>
 
@@ -240,6 +268,76 @@ async function baixarDocumento(storagePath, nomeArquivo){
   a.remove();
 }
 
+function carregarScript(src){
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Não foi possível carregar o visualizador de Word.'));
+    document.body.appendChild(script);
+  });
+}
+
+let docxPreviewCarregado = false;
+async function carregarDocxPreview(){
+  if(docxPreviewCarregado) return;
+  if(!window.JSZip) await carregarScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+  await carregarScript('https://cdn.jsdelivr.net/npm/docx-preview@0.3.2/dist/docx-preview.min.js');
+  docxPreviewCarregado = true;
+}
+
+function mostrarPreviewMsg(texto, erro){
+  document.getElementById('preview-body').innerHTML =
+    '<div class="preview-msg' + (erro ? ' erro' : '') + '">' + esc(texto) + '</div>';
+}
+
+async function visualizarDocumento(storagePath, nomeArquivo){
+  const overlay = document.getElementById('preview-overlay');
+  const corpo = document.getElementById('preview-body');
+  document.getElementById('preview-titulo').textContent = nomeArquivo;
+  document.getElementById('preview-baixar').onclick = () => baixarDocumento(storagePath, nomeArquivo);
+  corpo.innerHTML = '';
+  overlay.classList.add('show');
+  mostrarPreviewMsg('Carregando...');
+
+  const { data, error } = await sb.storage.from('documentos').createSignedUrl(storagePath, 60);
+  if(error){ mostrarPreviewMsg('Erro ao gerar link de visualização: ' + error.message, true); return; }
+
+  const ext = (nomeArquivo.split('.').pop() || '').toLowerCase();
+
+  if(ext === 'pdf'){
+    corpo.innerHTML = '<iframe src="' + data.signedUrl + '"></iframe>';
+    return;
+  }
+
+  if(ext === 'docx'){
+    try{
+      await carregarDocxPreview();
+      const resp = await fetch(data.signedUrl);
+      if(!resp.ok) throw new Error('Falha ao baixar o arquivo para visualização.');
+      const blob = await resp.blob();
+      corpo.innerHTML = '<div class="docx-render-wrap" id="docx-render-alvo"></div>';
+      await window.docx.renderAsync(blob, document.getElementById('docx-render-alvo'), undefined, {
+        inWrapper: false, ignoreWidth: false, ignoreHeight: true
+      });
+    }catch(e){
+      mostrarPreviewMsg('Não foi possível pré-visualizar este arquivo (' + e.message + '). Use "Baixar" para abri-lo.', true);
+    }
+    return;
+  }
+
+  mostrarPreviewMsg('Pré-visualização não disponível para este tipo de arquivo. Use "Baixar" para abri-lo.');
+}
+
+function fecharPreview(){
+  document.getElementById('preview-overlay').classList.remove('show');
+  document.getElementById('preview-body').innerHTML = '';
+}
+
+document.getElementById('preview-overlay').addEventListener('click', (e) => {
+  if(e.target.id === 'preview-overlay') fecharPreview();
+});
+
 async function excluirDocumento(id, storagePath){
   if(!confirm('Excluir este documento? Essa ação não pode ser desfeita.')) return;
   const { error: errStorage } = await sb.storage.from('documentos').remove([storagePath]);
@@ -277,6 +375,7 @@ function renderLista(lista){
           <td><span class="tag ${tagClass}">${esc(CATEGORIA_LABEL[d.categoria] || d.categoria)}</span></td>
           <td class="muted">${formatarTamanho(d.tamanho_bytes)}</td>
           <td class="acoes">
+            <button onclick="visualizarDocumento('${esc(d.storage_path)}','${esc(d.nome_arquivo)}')">Visualizar</button>
             <button onclick="baixarDocumento('${esc(d.storage_path)}','${esc(d.nome_arquivo)}')">Baixar</button>
             <button class="excluir" onclick="excluirDocumento('${d.id}','${esc(d.storage_path)}')">Excluir</button>
           </td>
