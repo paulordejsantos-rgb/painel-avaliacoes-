@@ -248,10 +248,33 @@
       '</div>';
     document.body.appendChild(container);
 
+    // O widget injeta sua própria folha de estilo (com !important) DEPOIS
+    // da nossa, grudando o botão à direita — e o CSS dele vence o nosso
+    // em caso de empate porque veio por último. Por isso, força a posição
+    // à esquerda com <style> inserido só depois que o widget terminar de
+    // montar, e reforça de novo a cada mudança (o botão é arrastável e
+    // reaplica seu próprio estilo ao reposicionar).
+    function forcarEsquerda() {
+      var style = document.getElementById('vw-left-override');
+      if (!style) {
+        style = document.createElement('style');
+        style.id = 'vw-left-override';
+        document.head.appendChild(style);
+      }
+      style.textContent =
+        'div[vw]{position:fixed!important;left:20px!important;right:auto!important;z-index:250!important;}' +
+        'div[vw] .vw-access-button,div[vw] .vw-plugin-wrapper{left:0!important;right:auto!important;}';
+    }
+
+    var observer = new MutationObserver(forcarEsquerda);
+    observer.observe(container, { attributes: true, subtree: true, attributeFilter: ['style', 'class'] });
+
     var script = document.createElement('script');
     script.src = 'https://vlibras.gov.br/app/vlibras-plugin.js';
     script.onload = function () {
       if (window.VLibras) new window.VLibras.Widget('https://vlibras.gov.br/app');
+      setTimeout(forcarEsquerda, 400);
+      setTimeout(forcarEsquerda, 1200);
     };
     document.body.appendChild(script);
   }
