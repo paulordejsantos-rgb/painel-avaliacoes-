@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversas do WhatsApp — A Casa & Designer</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="icon" href="assets/images/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="assets/images/favicon-64.png" sizes="64x64" type="image/png">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Painel A&D">
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#161616; --border:#2a2a2a; --gold:#C9A84C;
+    --txt:#F0EDE8; --muted:#999;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:360px;}
+  .login-box h1{font-size:20px;color:var(--gold);margin:0 0 4px;text-align:center;}
+  .login-box p{font-size:13px;color:var(--muted);margin:0 0 24px;text-align:center;}
+  .login-box input{width:100%;padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);font-size:14px;}
+  .login-box button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;}
+  .login-box button:disabled{opacity:0.5;cursor:not-allowed;}
+  .login-err{color:#e35b5b;font-size:13px;margin-top:10px;text-align:center;min-height:16px;}
+
+  .app{display:none;}
+  .app.show{display:block;}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;flex-wrap:wrap;gap:10px;}
+  header.top h1{font-size:18px;color:var(--gold);margin:0;}
+  header.top .nav-links{display:flex;gap:14px;font-size:13px;}
+  header.top .nav-links a{color:var(--muted);text-decoration:none;}
+  header.top .nav-links a.active{color:var(--gold);font-weight:700;}
+  header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+
+  .main{max-width:1200px;margin:0 auto;padding:20px;}
+  .main-intro{margin:0 0 18px;}
+  .main-intro h2{font-size:22px;margin:0 0 6px;color:var(--txt);}
+  .main-intro p{font-size:13px;color:var(--muted);margin:0;}
+
+  .conversas-wrap{display:flex;gap:16px;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-height:520px;}
+
+  .lista-contatos{width:320px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;max-height:70vh;}
+  .contato-item{display:block;width:100%;text-align:left;background:transparent;border:none;border-bottom:1px solid var(--border);padding:14px 16px;cursor:pointer;color:var(--txt);}
+  .contato-item:hover{background:rgba(201,168,76,0.06);}
+  .contato-item.ativo{background:rgba(201,168,76,0.12);}
+  .contato-nome{font-weight:700;font-size:13px;margin-bottom:2px;}
+  .contato-telefone{font-size:11px;color:var(--muted);margin-bottom:4px;}
+  .contato-ultima{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .contato-quando{font-size:10px;color:var(--muted);float:right;}
+
+  .painel-chat{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .chat-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+  .chat-head h3{margin:0;font-size:15px;}
+  .chat-head span{font-size:11px;color:var(--muted);}
+  .btn-voltar{display:none;background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;}
+  .chat-corpo{flex:1;padding:20px;overflow-y:auto;max-height:62vh;display:flex;flex-direction:column;gap:10px;}
+  .bolha{max-width:70%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.4;white-space:pre-wrap;word-break:break-word;}
+  .bolha-recebida{align-self:flex-start;background:#000;border:1px solid var(--border);border-bottom-left-radius:4px;}
+  .bolha-enviada{align-self:flex-end;background:rgba(201,168,76,0.16);border:1px solid rgba(201,168,76,0.4);border-bottom-right-radius:4px;color:var(--txt);}
+  .bolha-hora{display:block;margin-top:4px;font-size:10px;color:var(--muted);text-align:right;}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+  .loading{padding:40px;text-align:center;color:var(--muted);}
+
+  @media (max-width: 760px) {
+    .conversas-wrap{flex-direction:column;}
+    .lista-contatos{width:100%;border-right:none;border-bottom:1px solid var(--border);max-height:none;}
+    .conversas-wrap.vendo-chat .lista-contatos{display:none;}
+    .conversas-wrap:not(.vendo-chat) .painel-chat{display:none;}
+    .btn-voltar{display:inline-block;}
+  }
+</style>
+<link rel="stylesheet" href="assets/css/vivo.css">
+</head>
+<body>
+
+  <div class="login-wrap" id="login-wrap">
+    <div class="login-box">
+      <h1>Conversas</h1>
+      <p>A Casa & Designer</p>
+      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+      <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+      <button id="login-btn" onclick="fazerLogin()">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="top">
+      <h1>💬 Conversas do WhatsApp</h1>
+      <div class="nav-links">
+        <a href="index.html">Avaliações</a>
+        <a href="crm.html">CRM</a>
+        <a href="financeiro.html">Financeiro</a>
+        <a href="leads.html">Leads</a>
+        <a href="instalacao.html">Instalação</a>
+        <a href="documentos.html">Documentos</a>
+        <a href="central.html">Central</a>
+        <a href="notificacoes.html">Notificações</a>
+        <a href="whatsapp.html" class="active">WhatsApp</a>
+        <a href="manual.html">Manual</a>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <a class="sino-notificacoes" href="notificacoes.html" title="Notificações" aria-label="Notificações">🔔<span class="sino-badge" hidden></span></a>
+        <button onclick="fazerLogout()">Sair</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <div class="main-intro">
+        <h2>Conversas do WhatsApp</h2>
+        <p>Histórico do número da empresa — não aparece no WhatsApp normal porque fica reservado para o robô. Só leitura por enquanto.</p>
+      </div>
+
+      <div class="conversas-wrap" id="conversas-wrap">
+        <div class="lista-contatos" id="lista-contatos">
+          <div class="loading">Carregando...</div>
+        </div>
+        <div class="painel-chat" id="painel-chat">
+          <div class="empty">Escolha uma conversa à esquerda.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://chwxepwdsyspcdkalaic.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNod3hlcHdkc3lzcGNka2FsYWljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjUxOTksImV4cCI6MjA5MjA0MTE5OX0.sCcGeN9AxTBTNDMlOia2JPJR-HRxo2vQDHB6ojhbXWk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let mensagensTodas = [];
+let leadsPorId = {};
+let telefoneAtivo = null;
+
+async function fazerLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if(!email || !senha){ err.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+  if(error){ err.textContent = 'E-mail ou senha inválidos.'; return; }
+  mostrarApp();
+}
+
+async function fazerLogout(){
+  await sb.auth.signOut();
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-wrap').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-senha').value = '';
+}
+
+const SLUG_POR_RESTAURANTE = {
+  'Pizzaria Premium': 'pizzaria-premium',
+  'The Burger Foundry': 'burger-foundry',
+  'Bistrô Elegante': 'bistro-elegante',
+  'Peso & Sabor': 'peso-e-sabor'
+};
+
+async function redirecionarSeRestaurante(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return false;
+  const { data } = await sb.from('perfis_restaurante').select('restaurante').eq('user_id', user.id).maybeSingle();
+  if(data && data.restaurante && SLUG_POR_RESTAURANTE[data.restaurante]){
+    window.location.href = '/' + SLUG_POR_RESTAURANTE[data.restaurante] + '/';
+    return true;
+  }
+  return false;
+}
+
+async function aplicarRestricaoColaborador(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return;
+  const { data: admin } = await sb.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
+  if(admin) return;
+  const { data: colaborador } = await sb.from('colaboradores').select('user_id').eq('user_id', user.id).maybeSingle();
+  if(!colaborador) return;
+  document.querySelectorAll('.nav-links a[href="crm.html"], .nav-links a[href="financeiro.html"]').forEach(function(el){ el.remove(); });
+}
+
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, function(c){
+    return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
+  });
+}
+
+function formatarHora(iso){
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatarQuando(iso){
+  return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function nomeDoContato(telefone, leadId){
+  const lead = leadId ? leadsPorId[leadId] : null;
+  return (lead && lead.nome_contato) || ('+' + telefone);
+}
+
+function montarConversas(){
+  const porTelefone = {};
+  mensagensTodas.forEach(function(m){
+    if(!porTelefone[m.telefone]){
+      porTelefone[m.telefone] = { telefone: m.telefone, lead_id: m.lead_id, mensagens: [] };
+    }
+    porTelefone[m.telefone].mensagens.push(m);
+    // mantém o lead_id mais recente que a conversa teve
+    porTelefone[m.telefone].lead_id = m.lead_id || porTelefone[m.telefone].lead_id;
+  });
+  return Object.values(porTelefone).sort(function(a, b){
+    const ua = a.mensagens[a.mensagens.length - 1].criado_em;
+    const ub = b.mensagens[b.mensagens.length - 1].criado_em;
+    return ub.localeCompare(ua);
+  });
+}
+
+function renderListaContatos(){
+  const conversas = montarConversas();
+  const lista = document.getElementById('lista-contatos');
+  if(!conversas.length){
+    lista.innerHTML = '<div class="empty">Nenhuma conversa ainda.</div>';
+    return;
+  }
+  lista.innerHTML = conversas.map(function(c){
+    const ultima = c.mensagens[c.mensagens.length - 1];
+    const nome = nomeDoContato(c.telefone, c.lead_id);
+    const ativa = c.telefone === telefoneAtivo ? ' ativo' : '';
+    return '<button type="button" class="contato-item' + ativa + '" data-telefone="' + esc(c.telefone) + '">' +
+      '<span class="contato-quando">' + formatarHora(ultima.criado_em) + '</span>' +
+      '<div class="contato-nome">' + esc(nome) + '</div>' +
+      '<div class="contato-telefone">+' + esc(c.telefone) + '</div>' +
+      '<div class="contato-ultima">' + (ultima.direcao === 'enviada' ? 'Você: ' : '') + esc(ultima.texto) + '</div>' +
+    '</button>';
+  }).join('');
+
+  lista.querySelectorAll('.contato-item').forEach(function(btn){
+    btn.addEventListener('click', function(){ abrirConversa(btn.getAttribute('data-telefone')); });
+  });
+}
+
+function abrirConversa(telefone){
+  telefoneAtivo = telefone;
+  const conversas = montarConversas();
+  const conversa = conversas.find(function(c){ return c.telefone === telefone; });
+  renderListaContatos();
+
+  const painel = document.getElementById('painel-chat');
+  if(!conversa){ painel.innerHTML = '<div class="empty">Conversa não encontrada.</div>'; return; }
+
+  const nome = nomeDoContato(conversa.telefone, conversa.lead_id);
+  const linkLead = conversa.lead_id ? ' · <a href="leads.html" style="color:var(--gold);text-decoration:none;">Ver em Leads ↗</a>' : '';
+
+  painel.innerHTML =
+    '<div class="chat-head">' +
+      '<button type="button" class="btn-voltar" id="btn-voltar">← Voltar</button>' +
+      '<div><h3>' + esc(nome) + '</h3><span>+' + esc(conversa.telefone) + linkLead + '</span></div>' +
+    '</div>' +
+    '<div class="chat-corpo" id="chat-corpo"></div>';
+
+  const corpo = document.getElementById('chat-corpo');
+  corpo.innerHTML = conversa.mensagens.map(function(m){
+    const classe = m.direcao === 'enviada' ? 'bolha-enviada' : 'bolha-recebida';
+    return '<div class="bolha ' + classe + '">' + esc(m.texto) +
+      '<span class="bolha-hora">' + formatarQuando(m.criado_em) + '</span></div>';
+  }).join('');
+  corpo.scrollTop = corpo.scrollHeight;
+
+  document.getElementById('btn-voltar').addEventListener('click', function(){
+    document.getElementById('conversas-wrap').classList.remove('vendo-chat');
+  });
+  document.getElementById('conversas-wrap').classList.add('vendo-chat');
+}
+
+async function carregarConversas(){
+  const [{ data: mensagens, error: erroMensagens }, { data: leads, error: erroLeads }] = await Promise.all([
+    sb.from('whatsapp_mensagens').select('*').order('criado_em', { ascending: true }).limit(2000),
+    sb.from('leads').select('id, nome_contato').eq('origem', 'WhatsApp')
+  ]);
+
+  if(erroMensagens){
+    document.getElementById('lista-contatos').innerHTML = '<div class="empty">Não foi possível carregar as conversas.</div>';
+    return;
+  }
+
+  leadsPorId = {};
+  (leads || []).forEach(function(l){ leadsPorId[l.id] = l; });
+  mensagensTodas = mensagens || [];
+  renderListaContatos();
+}
+
+async function mostrarApp(){
+  if(await redirecionarSeRestaurante()) return;
+  await aplicarRestricaoColaborador();
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  await carregarConversas();
+  if(window.vivoInitSinoNotificacoes) window.vivoInitSinoNotificacoes(sb);
+}
+
+(async function init(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ mostrarApp(); }
+})();
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if(e.key === 'Enter') fazerLogin();
+});
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(err){
+      console.warn('Falha ao registrar service worker:', err);
+    });
+  });
+}
+</script>
+<script src="assets/js/vivo.js" defer></script>
+</body>
+</html>
