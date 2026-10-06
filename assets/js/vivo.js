@@ -230,6 +230,43 @@
     if (window.speechSynthesis) window.speechSynthesis.cancel();
   });
 
+  // ---- Sino de notificações (novo contato, suporte ou pedido pelo
+  // WhatsApp, etc. — ver tabela public.notificacoes) ----
+  //
+  // Cada página chama vivoInitSinoNotificacoes(sb) já logada, passando
+  // o client do Supabase que ela mesma criou. Conta quantas notificações
+  // chegaram depois da última vez que alguém abriu a página
+  // notificacoes.html neste navegador (marca salva em localStorage —
+  // por isso é por aparelho/navegador, não por conta).
+  var NOTIF_VISTO_KEY = 'notif_ultima_vista';
+
+  async function vivoInitSinoNotificacoes(sb) {
+    var sino = document.querySelector('.sino-notificacoes');
+    if (!sino || !sb) return;
+    var badge = sino.querySelector('.sino-badge');
+    if (!badge) return;
+
+    try {
+      var ultimaVista = localStorage.getItem(NOTIF_VISTO_KEY) || '1970-01-01T00:00:00.000Z';
+      var resultado = await sb
+        .from('notificacoes')
+        .select('id', { count: 'exact', head: true })
+        .gt('criado_em', ultimaVista);
+      if (resultado.error) return;
+      var total = resultado.count || 0;
+      if (total > 0) {
+        badge.textContent = total > 99 ? '99+' : String(total);
+        badge.hidden = false;
+      } else {
+        badge.hidden = true;
+      }
+    } catch (e) {
+      // Falha silenciosa — o sino simplesmente fica sem contador.
+    }
+  }
+
+  window.vivoInitSinoNotificacoes = vivoInitSinoNotificacoes;
+
   // ---- VLibras (tradução em Libras do governo) ----
   //
   // Mesmo widget oficial usado nos cardápios digitais (acd-pizzaria-premium

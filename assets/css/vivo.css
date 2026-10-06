@@ -5,7 +5,7 @@
    Não substitui o <style> de cada página — só adiciona vida em
    cima do padrão visual já existente (tema escuro + dourado).
    Importado por: index, crm, financeiro, leads, instalacao,
-   documentos, central, manual.
+   documentos, central, manual, notificacoes.
    ============================================================ */
 
 @media (prefers-reduced-motion: no-preference) {
@@ -102,11 +102,6 @@ header.top .nav-links a::after {
 }
 header.top .nav-links a:hover::after, header.top .nav-links a.active::after { right: 0; }
 
-/* "Carregando..." pulsa suavemente em vez de ficar estático */
-@media (prefers-reduced-motion: no-preference) {
-  .loading { animation: vivo-pulse 1.4s ease-in-out infinite; }
-  @keyframes vivo-pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
-}
 
 /* Barras de progresso / funil: preenchimento sempre animado */
 .bar-fill, .prog-fill, .funil-bar { transition: width .6s cubic-bezier(.16,1,.3,1); }
@@ -116,6 +111,41 @@ header.top .nav-links a:hover::after, header.top .nav-links a.active::after { ri
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+
+/* Sino de notificações no cabeçalho (badge com contagem de novidades) */
+.sino-notificacoes {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 16px;
+  background: transparent;
+}
+.sino-notificacoes:hover { border-color: var(--gold); color: var(--gold); }
+.sino-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #e35b5b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.sino-badge[hidden] { display: none; }
 
 /* ============================================================
    Barra de acessibilidade — ajuste de fonte, alto contraste,

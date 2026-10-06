@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Central — A Casa & Designer</title>
+<title>Notificações — A Casa & Designer</title>
 
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d0d0d">
@@ -41,25 +41,22 @@
   header.top .nav-links a.active{color:var(--gold);font-weight:700;}
   header.top button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
 
-  .main{max-width:1200px;margin:0 auto;padding:28px 20px 60px;}
-  .main-intro{margin:0 0 26px;}
+  .main{max-width:900px;margin:0 auto;padding:28px 20px 60px;}
+  .main-intro{margin:0 0 22px;}
   .main-intro h2{font-size:22px;margin:0 0 6px;color:var(--txt);}
   .main-intro p{font-size:13px;color:var(--muted);margin:0;}
 
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
-
-  .hub-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px;transition:border-color .15s ease;}
-  .hub-card:hover{border-color:rgba(201,168,76,0.4);}
-  .hub-card-head{display:flex;align-items:center;gap:12px;}
-  .hub-icon{width:42px;height:42px;border-radius:12px;background:rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
-  .hub-card-head h3{font-size:15px;margin:0;color:var(--txt);}
-  .hub-card-head span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;}
-
-  .hub-links{display:flex;flex-direction:column;gap:8px;}
-  .hub-link{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:#000;color:var(--txt);text-decoration:none;font-size:13px;transition:border-color .15s ease, color .15s ease;}
-  .hub-link:hover{border-color:var(--gold);color:var(--gold);}
-  .hub-link .arrow{color:var(--muted);font-size:14px;transition:color .15s ease;}
-  .hub-link:hover .arrow{color:var(--gold);}
+  .lista{display:flex;flex-direction:column;gap:10px;}
+  .notif-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;display:flex;gap:14px;align-items:flex-start;}
+  .notif-icone{width:38px;height:38px;border-radius:10px;background:rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .notif-corpo{flex:1;min-width:0;}
+  .notif-titulo{font-weight:700;font-size:14px;color:var(--txt);margin:0 0 4px;}
+  .notif-mensagem{font-size:13px;color:var(--muted);margin:0 0 6px;word-break:break-word;}
+  .notif-rodape{display:flex;gap:10px;align-items:center;font-size:11px;color:var(--muted);}
+  .notif-link{color:var(--gold);text-decoration:none;}
+  .notif-link:hover{text-decoration:underline;}
+  .loading{padding:40px;text-align:center;color:var(--muted);}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
 </style>
 <link rel="stylesheet" href="assets/css/vivo.css">
 </head>
@@ -67,7 +64,7 @@
 
   <div class="login-wrap" id="login-wrap">
     <div class="login-box">
-      <h1>Central</h1>
+      <h1>Notificações</h1>
       <p>A Casa & Designer</p>
       <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
       <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
@@ -78,7 +75,7 @@
 
   <div class="app" id="app">
     <header class="top">
-      <h1>🧭 Central</h1>
+      <h1>🔔 Notificações</h1>
       <div class="nav-links">
         <a href="index.html">Avaliações</a>
         <a href="crm.html">CRM</a>
@@ -86,92 +83,21 @@
         <a href="leads.html">Leads</a>
         <a href="instalacao.html">Instalação</a>
         <a href="documentos.html">Documentos</a>
-        <a href="central.html" class="active">Central</a>
-        <a href="notificacoes.html">Notificações</a>
+        <a href="central.html">Central</a>
+        <a href="notificacoes.html" class="active">Notificações</a>
         <a href="manual.html">Manual</a>
       </div>
-      <div style="display:flex;gap:10px;align-items:center;">
-        <a class="sino-notificacoes" href="notificacoes.html" title="Notificações" aria-label="Notificações">🔔<span class="sino-badge" hidden></span></a>
-        <button onclick="fazerLogout()">Sair</button>
-      </div>
+      <button onclick="fazerLogout()">Sair</button>
     </header>
 
     <div class="main">
       <div class="main-intro">
-        <h2>Atalhos rápidos</h2>
-        <p>Todos os sistemas e canais da A Casa & Designer, em um só lugar.</p>
+        <h2>Notificações</h2>
+        <p>Avisos automáticos do painel — novos contatos e pedidos recebidos pelo WhatsApp, mais recentes primeiro.</p>
       </div>
 
-      <div class="grid">
-
-        <div class="hub-card">
-          <div class="hub-card-head">
-            <div class="hub-icon">🌐</div>
-            <div>
-              <h3>Site & Presença Digital</h3>
-              <span>Institucional</span>
-            </div>
-          </div>
-          <div class="hub-links">
-            <a class="hub-link" href="https://acasaedesigner.com/" target="_blank" rel="noopener">Site <span class="arrow">↗</span></a>
-            <a class="hub-link" href="https://acasaedesigner.com/presenca-digital" target="_blank" rel="noopener">Presença digital <span class="arrow">↗</span></a>
-          </div>
-        </div>
-
-        <div class="hub-card">
-          <div class="hub-card-head">
-            <div class="hub-icon">🎯</div>
-            <div>
-              <h3>Leads / CRM</h3>
-              <span>Vendas</span>
-            </div>
-          </div>
-          <div class="hub-links">
-            <a class="hub-link" href="https://painel-avaliacoes-one.vercel.app/leads.html" target="_blank" rel="noopener">Painel de Leads <span class="arrow">↗</span></a>
-            <a class="hub-link" href="https://painel-avaliacoes-one.vercel.app/avaliacoes-publicas.html" target="_blank" rel="noopener">Vitrine pública de avaliações <span class="arrow">↗</span></a>
-          </div>
-        </div>
-
-        <div class="hub-card">
-          <div class="hub-card-head">
-            <div class="hub-icon">💬</div>
-            <div>
-              <h3>Comunicação</h3>
-              <span>Canais</span>
-            </div>
-          </div>
-          <div class="hub-links">
-            <a class="hub-link" href="https://mail.hostinger.com/mailboxes/INBOX" target="_blank" rel="noopener">Webmail (Hostinger) <span class="arrow">↗</span></a>
-            <a class="hub-link" href="https://web.whatsapp.com/" target="_blank" rel="noopener">WhatsApp Web <span class="arrow">↗</span></a>
-          </div>
-        </div>
-
-        <div class="hub-card">
-          <div class="hub-card-head">
-            <div class="hub-icon">📝</div>
-            <div>
-              <h3>Blog</h3>
-              <span>Conteúdo</span>
-            </div>
-          </div>
-          <div class="hub-links">
-            <a class="hub-link" href="https://acasaedesigner.blog" target="_blank" rel="noopener">Blog A Casa & Designer <span class="arrow">↗</span></a>
-          </div>
-        </div>
-
-        <div class="hub-card">
-          <div class="hub-card-head">
-            <div class="hub-icon">⚙️</div>
-            <div>
-              <h3>Infraestrutura</h3>
-              <span>Hospedagem</span>
-            </div>
-          </div>
-          <div class="hub-links">
-            <a class="hub-link" href="https://nuven.pro/dashboard" target="_blank" rel="noopener">Nuven.pro Dashboard <span class="arrow">↗</span></a>
-          </div>
-        </div>
-
+      <div class="lista" id="lista">
+        <div class="loading">Carregando...</div>
       </div>
     </div>
   </div>
@@ -233,12 +159,67 @@ async function aplicarRestricaoColaborador(){
   document.querySelectorAll('.nav-links a[href="crm.html"], .nav-links a[href="financeiro.html"]').forEach(function(el){ el.remove(); });
 }
 
+const ICONE_POR_TIPO = {
+  whatsapp_novo_contato: '💬',
+  whatsapp_suporte: '🛠️',
+  whatsapp_falar_paulo: '📞',
+  whatsapp_mensagem: '✉️'
+};
+
+function formatarQuando(iso){
+  const d = new Date(iso);
+  return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function renderLista(notificacoes){
+  const lista = document.getElementById('lista');
+  if(!notificacoes.length){
+    lista.innerHTML = '<div class="empty">Nenhuma notificação ainda.</div>';
+    return;
+  }
+  lista.innerHTML = notificacoes.map(function(n){
+    const icone = ICONE_POR_TIPO[n.tipo] || '🔔';
+    const linkLead = n.lead_id
+      ? '<a class="notif-link" href="leads.html">Ver em Leads ↗</a>'
+      : '';
+    return '<div class="notif-card">' +
+      '<div class="notif-icone">' + icone + '</div>' +
+      '<div class="notif-corpo">' +
+        '<p class="notif-titulo">' + esc(n.titulo) + '</p>' +
+        (n.mensagem ? '<p class="notif-mensagem">' + esc(n.mensagem) + '</p>' : '') +
+        '<div class="notif-rodape"><span>' + formatarQuando(n.criado_em) + '</span>' + linkLead + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, function(c){
+    return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
+  });
+}
+
+async function carregarNotificacoes(){
+  const { data, error } = await sb
+    .from('notificacoes')
+    .select('*')
+    .order('criado_em', { ascending: false })
+    .limit(200);
+  if(error){
+    document.getElementById('lista').innerHTML = '<div class="empty">Não foi possível carregar as notificações.</div>';
+    return;
+  }
+  renderLista(data || []);
+  // Marca "visto agora" para zerar o sino em todas as telas deste navegador.
+  localStorage.setItem('notif_ultima_vista', new Date().toISOString());
+}
+
 async function mostrarApp(){
   if(await redirecionarSeRestaurante()) return;
   await aplicarRestricaoColaborador();
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('app').classList.add('show');
-  if(window.vivoInitSinoNotificacoes) window.vivoInitSinoNotificacoes(sb);
+  await carregarNotificacoes();
 }
 
 (async function init(){

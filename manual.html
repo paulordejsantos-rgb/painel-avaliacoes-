@@ -93,9 +93,13 @@
         <a href="instalacao.html">Instalação</a>
         <a href="documentos.html">Documentos</a>
         <a href="central.html">Central</a>
+        <a href="notificacoes.html">Notificações</a>
         <a href="manual.html" class="active">Manual</a>
       </div>
-      <button onclick="fazerLogout()">Sair</button>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <a class="sino-notificacoes" href="notificacoes.html" title="Notificações" aria-label="Notificações">🔔<span class="sino-badge" hidden></span></a>
+        <button onclick="fazerLogout()">Sair</button>
+      </div>
     </header>
 
     <div class="main">
@@ -114,6 +118,8 @@
         <a href="#instalacao">Instalação</a>
         <a href="#documentos">Documentos</a>
         <a href="#central">Central</a>
+        <a href="#notificacoes">Notificações</a>
+        <a href="#whatsapp-automatico">WhatsApp automático</a>
         <a href="#portal-restaurante">Portal do restaurante</a>
         <a href="#avaliar">Avaliar (pública)</a>
         <a href="#proposta">Proposta comercial</a>
@@ -245,6 +251,31 @@
         <p>Página de atalhos — não tem dado próprio. Reúne links rápidos para o site institucional, o painel de Leads, e-mail (webmail Hostinger), WhatsApp Web, o blog e o painel de hospedagem (Nuven.pro). É a "página inicial" para não precisar guardar vários favoritos soltos no navegador.</p>
       </div>
 
+      <div class="sec" id="notificacoes">
+        <div class="sec-head">
+          <div class="sec-icon">🔔</div>
+          <div><h3>Notificações</h3><span class="tag">notificacoes.html</span></div>
+        </div>
+        <span class="quem">Admin e Colaborador</span>
+        <p>Avisos automáticos gerados pelo robô do WhatsApp (veja "WhatsApp automático" logo abaixo): novo contato, pedido de suporte ou pedido para falar com o Paulo. O sino no cabeçalho de todas as telas mostra quantos avisos chegaram desde a última vez que essa pessoa abriu a página Notificações nesse navegador.</p>
+        <p>A lista mostra o tipo do aviso, a mensagem e, quando o aviso veio de um contato que virou lead, um link para abrir a aba Leads.</p>
+      </div>
+
+      <div class="sec" id="whatsapp-automatico">
+        <div class="sec-head">
+          <div class="sec-icon">🤖</div>
+          <div><h3>WhatsApp automático</h3><span class="tag">função whatsapp-webhook, no Supabase</span></div>
+        </div>
+        <span class="quem">Funciona sozinho — não tem tela própria no painel</span>
+        <p>Quando alguém escreve pela primeira vez para o número da empresa no WhatsApp, um robô responde sozinho com uma saudação e um menu (1. Conhecer o Cardápio Digital, 2. Já sou cliente/suporte, 3. Falar com o Paulo). Ao mesmo tempo:</p>
+        <ul>
+          <li>Essa pessoa vira automaticamente um <strong>lead</strong> na aba Leads, com origem "WhatsApp".</li>
+          <li>Uma <strong>notificação</strong> é criada (veja acima) para o painel avisar quem está de plantão.</li>
+          <li>Dependendo da opção escolhida, o robô manda uma resposta diferente — hoje são textos fixos; respostas mais espertas (um "robô" que entende perguntas livres) ficam para uma próxima etapa.</li>
+        </ul>
+        <div class="nota">Detalhe técnico: isso roda na função Edge <code>whatsapp-webhook</code> do projeto Supabase, usando o token da WhatsApp Cloud API guardado como secret (<code>WHATSAPP_TOKEN</code>). O estado de cada conversa (se já mandou o menu, qual opção a pessoa escolheu) fica na tabela <code>whatsapp_conversas</code>, que só essa função acessa.</div>
+      </div>
+
       <h2 class="grupo">O que o cliente (restaurante) vê</h2>
 
       <div class="sec" id="portal-restaurante">
@@ -372,6 +403,7 @@ async function mostrarApp(){
   await aplicarRestricaoColaborador();
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('app').classList.add('show');
+  if(window.vivoInitSinoNotificacoes) window.vivoInitSinoNotificacoes(sb);
 }
 
 (async function init(){

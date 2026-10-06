@@ -119,9 +119,13 @@
         <a href="instalacao.html">Instalação</a>
         <a href="documentos.html" class="active">Documentos</a>
         <a href="central.html">Central</a>
+        <a href="notificacoes.html">Notificações</a>
         <a href="manual.html">Manual</a>
       </div>
-      <button onclick="fazerLogout()">Sair</button>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <a class="sino-notificacoes" href="notificacoes.html" title="Notificações" aria-label="Notificações">🔔<span class="sino-badge" hidden></span></a>
+        <button onclick="fazerLogout()">Sair</button>
+      </div>
     </header>
 
     <div class="main">
@@ -509,6 +513,7 @@ async function mostrarApp(){
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('app').classList.add('show');
   carregarDocumentos();
+  if(window.vivoInitSinoNotificacoes) window.vivoInitSinoNotificacoes(sb);
 }
 
 (async function init(){
